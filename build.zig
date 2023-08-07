@@ -460,7 +460,7 @@ pub fn createSDL(b: *std.Build, target: std.zig.CrossTarget, optimize: std.built
         }
     } //SDL_VIDEO_X
 
-    lib.addIncludePath(root_path ++ "include");
+    lib.addIncludePath(.{ .path = root_path ++ "include" });
     lib.addCSourceFiles(&generic_src_files, c_flags.items);
     lib.defineCMacro("SDL_USE_BUILTIN_OPENGL_DEFINITIONS", "1");
 
@@ -646,7 +646,7 @@ pub fn createSDL(b: *std.Build, target: std.zig.CrossTarget, optimize: std.built
         //not sure if this is fully correct (or if we need to define SDL_THREAD_GENERIC_COND_SUFFIX)
         //due to a linker error on Windows that happens earlier on, but it seems fine enough for now, and can be tested later
         .windows => {
-            lib.addCSourceFile(root_path ++ "src/thread/generic/SDL_syscond.c", c_flags.items);
+            lib.addCSourceFile(.{ .file = .{ .path = root_path ++ "src/thread/generic/SDL_syscond.c" }, .flags = c_flags.items });
             lib.addCSourceFiles((try find_c_cpp_sources(b.allocator, root_path ++ "src/thread/windows/")).c, c_flags.items);
         },
         else => |value| {
@@ -658,10 +658,10 @@ pub fn createSDL(b: *std.Build, target: std.zig.CrossTarget, optimize: std.built
     if (sdl_options.power_implementation) |chosen| {
         switch (chosen) {
             //TODO: uikit uses a .m file, we should handle that!
-            .winrt => lib.addCSourceFile(root_path ++ "src/power/winrt/SDL_syspower.cpp", c_flags.items),
+            .winrt => lib.addCSourceFile(.{ .file = .{ .path = root_path ++ "src/power/winrt/SDL_syspower.cpp" }, .flags = c_flags.items }),
             else => |value| {
                 const path = try std.mem.concat(b.allocator, u8, &.{ root_path, "src/power/", @tagName(value), "/SDL_syspower.c" });
-                lib.addCSourceFile(path, c_flags.items);
+                lib.addCSourceFile(.{ .file = .{ .path = path }, .flags = c_flags.items });
             },
         }
     } else {
@@ -670,10 +670,10 @@ pub fn createSDL(b: *std.Build, target: std.zig.CrossTarget, optimize: std.built
     }
 
     switch (sdl_options.timer_implementation) {
-        .ngage => lib.addCSourceFile(root_path ++ "src/timer/ngage/SDL_systimer.cpp", c_flags.items),
+        .ngage => lib.addCSourceFile(.{ .file = .{ .path = root_path ++ "src/timer/ngage/SDL_systimer.cpp" }, .flags = c_flags.items }),
         else => |value| {
             const path = try std.mem.concat(b.allocator, u8, &.{ root_path, "src/timer/", @tagName(value), "/SDL_systimer.c" });
-            lib.addCSourceFile(path, c_flags.items);
+            lib.addCSourceFile(.{ .file = .{ .path = path }, .flags = c_flags.items });
         },
     }
 
@@ -682,18 +682,18 @@ pub fn createSDL(b: *std.Build, target: std.zig.CrossTarget, optimize: std.built
             lib.defineCMacro(b.fmt("SDL_LOADSO_{s}", .{try lazyToUpper(b.allocator, @tagName(value))}), "1");
 
             const path = try std.mem.concat(b.allocator, u8, &.{ root_path, "src/loadso/", @tagName(value), "/SDL_sysloadso.c" });
-            lib.addCSourceFile(path, c_flags.items);
+            lib.addCSourceFile(.{ .file = .{ .path = path }, .flags = c_flags.items });
         },
     }
 
     switch (sdl_options.locale_implementation) {
         //haiku is a .cc file (cpp?)
-        .haiku => lib.addCSourceFile(root_path ++ "src/locale/haiku/SDL_syslocale.cc", c_flags.items),
+        .haiku => lib.addCSourceFile(.{ .file = .{ .path = root_path ++ "src/locale/haiku/SDL_syslocale.cc" }, .flags = c_flags.items }),
         //macos is a .m file (obj-c)
-        .macosx => lib.addCSourceFile(root_path ++ "src/locale/macosx/SDL_syslocale.m", try std.mem.concat(b.allocator, []const u8, &.{ c_flags.items, &.{"-fobjc-arc"} })),
+        .macosx => lib.addCSourceFile(.{ .file = .{ .path = root_path ++ "src/locale/macosx/SDL_syslocale.m" }, .flags = try std.mem.concat(b.allocator, []const u8, &.{ c_flags.items, &.{"-fobjc-arc"} }) }),
         else => |value| {
             const path = try std.mem.concat(b.allocator, u8, &.{ root_path, "src/locale/", @tagName(value), "/SDL_syslocale.c" });
-            lib.addCSourceFile(path, c_flags.items);
+            lib.addCSourceFile(.{ .file = .{ .path = path }, .flags = c_flags.items });
         },
     }
 
@@ -715,7 +715,7 @@ pub fn createSDL(b: *std.Build, target: std.zig.CrossTarget, optimize: std.built
             lib.linkSystemLibrary("wayland-egl");
             lib.linkSystemLibrary("xkbcommon");
 
-            lib.addIncludePath(root_path ++ "include/wayland-protocols");
+            lib.addIncludePath(.{ .path = root_path ++ "include/wayland-protocols" });
 
             var src_files = try find_c_cpp_sources(b.allocator, root_path ++ "src/video/wayland/");
             lib.addCSourceFiles(src_files.c, c_flags.items);
@@ -738,263 +738,263 @@ pub fn createSDL(b: *std.Build, target: std.zig.CrossTarget, optimize: std.built
 
     { //joystick implementations
         if (sdl_options.joystick_implementations.dummy) {
-            lib.addCSourceFile(root_path ++ "src/joystick/dummy/SDL_sysjoystick.c", c_flags.items);
+            lib.addCSourceFile(.{ .file = .{ .path = root_path ++ "src/joystick/dummy/SDL_sysjoystick.c" }, .flags = c_flags.items });
         }
 
         if (sdl_options.joystick_implementations.linux) {
-            lib.addCSourceFile(root_path ++ "src/joystick/linux/SDL_sysjoystick.c", c_flags.items);
+            lib.addCSourceFile(.{ .file = .{ .path = root_path ++ "src/joystick/linux/SDL_sysjoystick.c" }, .flags = c_flags.items });
         }
 
         if (sdl_options.joystick_implementations.android) {
-            lib.addCSourceFile(root_path ++ "src/joystick/android/SDL_sysjoystick.c", c_flags.items);
+            lib.addCSourceFile(.{ .file = .{ .path = root_path ++ "src/joystick/android/SDL_sysjoystick.c" }, .flags = c_flags.items });
         }
 
         if (sdl_options.joystick_implementations.darwin) {
-            lib.addCSourceFile(root_path ++ "src/joystick/darwin/SDL_iokitjoystick.c", c_flags.items);
+            lib.addCSourceFile(.{ .file = .{ .path = root_path ++ "src/joystick/darwin/SDL_iokitjoystick.c" }, .flags = c_flags.items });
         }
 
         if (sdl_options.joystick_implementations.bsd) {
-            lib.addCSourceFile(root_path ++ "src/joystick/bsd/SDL_bsdjoystick.c", c_flags.items);
+            lib.addCSourceFile(.{ .file = .{ .path = root_path ++ "src/joystick/bsd/SDL_bsdjoystick.c" }, .flags = c_flags.items });
         }
 
         if (sdl_options.joystick_implementations.emscripten) {
-            lib.addCSourceFile(root_path ++ "src/joystick/emscripten/SDL_sysjoystick.c", c_flags.items);
+            lib.addCSourceFile(.{ .file = .{ .path = root_path ++ "src/joystick/emscripten/SDL_sysjoystick.c" }, .flags = c_flags.items });
         }
 
         if (sdl_options.joystick_implementations.emscripten) {
-            lib.addCSourceFile(root_path ++ "src/joystick/emscripten/SDL_sysjoystick.c", c_flags.items);
+            lib.addCSourceFile(.{ .file = .{ .path = root_path ++ "src/joystick/emscripten/SDL_sysjoystick.c" }, .flags = c_flags.items });
         }
 
         if (sdl_options.joystick_implementations.haiku) {
-            lib.addCSourceFile(root_path ++ "src/joystick/haiku/SDL_haikujoystick.cc", c_flags.items);
+            lib.addCSourceFile(.{ .file = .{ .path = root_path ++ "src/joystick/haiku/SDL_haikujoystick.cc" }, .flags = c_flags.items });
         }
 
         if (sdl_options.joystick_implementations.n3ds) {
-            lib.addCSourceFile(root_path ++ "src/joystick/n3ds/SDL_sysjoystick.c", c_flags.items);
+            lib.addCSourceFile(.{ .file = .{ .path = root_path ++ "src/joystick/n3ds/SDL_sysjoystick.c" }, .flags = c_flags.items });
         }
 
         if (sdl_options.joystick_implementations.os2) {
-            lib.addCSourceFile(root_path ++ "src/joystick/os2/SDL_os2joystick.c", c_flags.items);
+            lib.addCSourceFile(.{ .file = .{ .path = root_path ++ "src/joystick/os2/SDL_os2joystick.c" }, .flags = c_flags.items });
         }
 
         if (sdl_options.joystick_implementations.ps2) {
-            lib.addCSourceFile(root_path ++ "src/joystick/ps2/SDL_sysjoystick.c", c_flags.items);
+            lib.addCSourceFile(.{ .file = .{ .path = root_path ++ "src/joystick/ps2/SDL_sysjoystick.c" }, .flags = c_flags.items });
         }
 
         if (sdl_options.joystick_implementations.psp) {
-            lib.addCSourceFile(root_path ++ "src/joystick/psp/SDL_sysjoystick.c", c_flags.items);
+            lib.addCSourceFile(.{ .file = .{ .path = root_path ++ "src/joystick/psp/SDL_sysjoystick.c" }, .flags = c_flags.items });
         }
 
         if (sdl_options.joystick_implementations.virtual) {
-            lib.addCSourceFile(root_path ++ "src/joystick/virtual/SDL_virtualjoystick.c", c_flags.items);
+            lib.addCSourceFile(.{ .file = .{ .path = root_path ++ "src/joystick/virtual/SDL_virtualjoystick.c" }, .flags = c_flags.items });
         }
 
         if (sdl_options.joystick_implementations.vita) {
-            lib.addCSourceFile(root_path ++ "src/joystick/vita/SDL_sysjoystick.c", c_flags.items);
+            lib.addCSourceFile(.{ .file = .{ .path = root_path ++ "src/joystick/vita/SDL_sysjoystick.c" }, .flags = c_flags.items });
         }
 
         if (sdl_options.joystick_implementations.iphoneos) {
-            lib.addCSourceFile(
-                root_path ++ "src/joystick/iphoneos/SDL_mfijoystick.m",
-                try std.mem.concat(b.allocator, []const u8, &.{
+            lib.addCSourceFile(.{
+                .file = .{ .path = root_path ++ "src/joystick/iphoneos/SDL_mfijoystick.m" },
+                .flags = try std.mem.concat(b.allocator, []const u8, &.{
                     &.{"-fobjc-arc"},
                     c_flags.items,
                 }),
-            );
+            });
         }
 
         if (sdl_options.joystick_implementations.apple) {
-            lib.addCSourceFile(
-                root_path ++ "src/joystick/apple/SDL_mfijoystick.c",
-                try std.mem.concat(b.allocator, []const u8, &.{
+            lib.addCSourceFile(.{
+                .file = .{ .path = root_path ++ "src/joystick/apple/SDL_mfijoystick.c" },
+                .flags = try std.mem.concat(b.allocator, []const u8, &.{
                     &.{"-fobjc-arc"},
                     c_flags.items,
                 }),
-            );
+            });
         }
 
         //dinput, xinput, and rawinput are all windows exclusives, so if any of them are on, we need the windows joystick
         if (sdl_options.joystick_implementations.dinput or sdl_options.joystick_implementations.xinput or sdl_options.joystick_implementations.rawinput) {
-            lib.addCSourceFile(root_path ++ "src/joystick/windows/SDL_windowsjoystick.c", c_flags.items);
+            lib.addCSourceFile(.{ .file = .{ .path = root_path ++ "src/joystick/windows/SDL_windowsjoystick.c" }, .flags = c_flags.items });
         }
 
         if (sdl_options.joystick_implementations.dinput) {
-            lib.addCSourceFile(root_path ++ "src/joystick/windows/SDL_dinputjoystick.c", c_flags.items);
+            lib.addCSourceFile(.{ .file = .{ .path = root_path ++ "src/joystick/windows/SDL_dinputjoystick.c" }, .flags = c_flags.items });
         }
 
         if (sdl_options.joystick_implementations.xinput) {
-            lib.addCSourceFile(root_path ++ "src/joystick/windows/SDL_xinputjoystick.c", c_flags.items);
+            lib.addCSourceFile(.{ .file = .{ .path = root_path ++ "src/joystick/windows/SDL_xinputjoystick.c" }, .flags = c_flags.items });
         }
 
         if (sdl_options.joystick_implementations.rawinput) {
-            lib.addCSourceFile(root_path ++ "src/joystick/windows/SDL_rawinputjoystick.c", c_flags.items);
+            lib.addCSourceFile(.{ .file = .{ .path = root_path ++ "src/joystick/windows/SDL_rawinputjoystick.c" }, .flags = c_flags.items });
         }
 
         if (sdl_options.joystick_implementations.wgi) {
-            lib.addCSourceFile(root_path ++ "src/joystick/windows/windows_gaming_input.c", c_flags.items);
+            lib.addCSourceFile(.{ .file = .{ .path = root_path ++ "src/joystick/windows/windows_gaming_input.c" }, .flags = c_flags.items });
         }
 
         if (sdl_options.joystick_implementations.steam) {
-            lib.addCSourceFile(root_path ++ "src/joystick/steam/SDL_steamcontroller.c", c_flags.items);
+            lib.addCSourceFile(.{ .file = .{ .path = root_path ++ "src/joystick/steam/SDL_steamcontroller.c" }, .flags = c_flags.items });
         }
     } //joystick implementations
 
     { //haptic implementations
         if (sdl_options.haptic_implementation == .android) {
-            lib.addCSourceFile(root_path ++ "src/haptic/android/SDL_syshaptic.c", c_flags.items);
+            lib.addCSourceFile(.{ .file = .{ .path = root_path ++ "src/haptic/android/SDL_syshaptic.c" }, .flags = c_flags.items });
         }
 
         if (sdl_options.haptic_implementation == .darwin) {
-            lib.addCSourceFile(root_path ++ "src/haptic/darwin/SDL_syshaptic.c", c_flags.items);
+            lib.addCSourceFile(.{ .file = .{ .path = root_path ++ "src/haptic/darwin/SDL_syshaptic.c" }, .flags = c_flags.items });
         }
 
         if (sdl_options.haptic_implementation == .dummy) {
-            lib.addCSourceFile(root_path ++ "src/haptic/dummy/SDL_syshaptic.c", c_flags.items);
+            lib.addCSourceFile(.{ .file = .{ .path = root_path ++ "src/haptic/dummy/SDL_syshaptic.c" }, .flags = c_flags.items });
         }
 
         if (sdl_options.haptic_implementation == .linux) {
-            lib.addCSourceFile(root_path ++ "src/haptic/linux/SDL_syshaptic.c", c_flags.items);
+            lib.addCSourceFile(.{ .file = .{ .path = root_path ++ "src/haptic/linux/SDL_syshaptic.c" }, .flags = c_flags.items });
         }
 
         if (sdl_options.haptic_implementation == .windows) {
-            lib.addCSourceFile(root_path ++ "src/haptic/windows/SDL_dinputhaptic.c", c_flags.items);
-            lib.addCSourceFile(root_path ++ "src/haptic/windows/SDL_windowshaptic.c", c_flags.items);
-            lib.addCSourceFile(root_path ++ "src/haptic/windows/SDL_xinputhaptic.c", c_flags.items);
+            lib.addCSourceFile(.{ .file = .{ .path = root_path ++ "src/haptic/windows/SDL_dinputhaptic.c" }, .flags = c_flags.items });
+            lib.addCSourceFile(.{ .file = .{ .path = root_path ++ "src/haptic/windows/SDL_windowshaptic.c" }, .flags = c_flags.items });
+            lib.addCSourceFile(.{ .file = .{ .path = root_path ++ "src/haptic/windows/SDL_xinputhaptic.c" }, .flags = c_flags.items });
         }
     } //haptic implementations
 
     { //audio implementations
         if (sdl_options.audio_implementations.aaudio) {
-            lib.addCSourceFile(root_path ++ "src/audio/aaudio/SDL_aaudio.c", c_flags.items);
+            lib.addCSourceFile(.{ .file = .{ .path = root_path ++ "src/audio/aaudio/SDL_aaudio.c" }, .flags = c_flags.items });
         }
 
         if (sdl_options.audio_implementations.alsa) {
-            lib.addCSourceFile(root_path ++ "src/audio/alsa/SDL_alsa_audio.c", c_flags.items);
+            lib.addCSourceFile(.{ .file = .{ .path = root_path ++ "src/audio/alsa/SDL_alsa_audio.c" }, .flags = c_flags.items });
         }
 
         if (sdl_options.audio_implementations.android) {
-            lib.addCSourceFile(root_path ++ "src/audio/android/SDL_androidaudio.c", c_flags.items);
+            lib.addCSourceFile(.{ .file = .{ .path = root_path ++ "src/audio/android/SDL_androidaudio.c" }, .flags = c_flags.items });
         }
 
         if (sdl_options.audio_implementations.arts) {
-            lib.addCSourceFile(root_path ++ "src/audio/arts/SDL_artsaudio.c", c_flags.items);
+            lib.addCSourceFile(.{ .file = .{ .path = root_path ++ "src/audio/arts/SDL_artsaudio.c" }, .flags = c_flags.items });
         }
 
         if (sdl_options.audio_implementations.coreaudio) {
-            lib.addCSourceFile(
-                root_path ++ "src/audio/coreaudio/SDL_coreaudio.m",
-                try std.mem.concat(b.allocator, []const u8, &.{
+            lib.addCSourceFile(.{
+                .file = .{ .path = root_path ++ "src/audio/coreaudio/SDL_coreaudio.m" },
+                .flags = try std.mem.concat(b.allocator, []const u8, &.{
                     &.{"-fobjc-arc"},
                     c_flags.items,
                 }),
-            );
+            });
         }
 
         if (sdl_options.audio_implementations.directsound) {
-            lib.addCSourceFile(root_path ++ "src/audio/directsound/SDL_directsound.c", c_flags.items);
+            lib.addCSourceFile(.{ .file = .{ .path = root_path ++ "src/audio/directsound/SDL_directsound.c" }, .flags = c_flags.items });
         }
 
         if (sdl_options.audio_implementations.disk) {
-            lib.addCSourceFile(root_path ++ "src/audio/disk/SDL_diskaudio.c", c_flags.items);
+            lib.addCSourceFile(.{ .file = .{ .path = root_path ++ "src/audio/disk/SDL_diskaudio.c" }, .flags = c_flags.items });
         }
 
         if (sdl_options.audio_implementations.dsp) {
-            lib.addCSourceFile(root_path ++ "src/audio/dsp/SDL_dspaudio.c", c_flags.items);
+            lib.addCSourceFile(.{ .file = .{ .path = root_path ++ "src/audio/dsp/SDL_dspaudio.c" }, .flags = c_flags.items });
         }
 
         if (sdl_options.audio_implementations.dummy) {
-            lib.addCSourceFile(root_path ++ "src/audio/dummy/SDL_dummyaudio.c", c_flags.items);
+            lib.addCSourceFile(.{ .file = .{ .path = root_path ++ "src/audio/dummy/SDL_dummyaudio.c" }, .flags = c_flags.items });
         }
 
         if (sdl_options.audio_implementations.emscripten) {
-            lib.addCSourceFile(root_path ++ "src/audio/emscripten/SDL_emscriptenaudio.c", c_flags.items);
+            lib.addCSourceFile(.{ .file = .{ .path = root_path ++ "src/audio/emscripten/SDL_emscriptenaudio.c" }, .flags = c_flags.items });
         }
 
         if (sdl_options.audio_implementations.esd) {
-            lib.addCSourceFile(root_path ++ "src/audio/esd/SDL_esdaudio.c", c_flags.items);
+            lib.addCSourceFile(.{ .file = .{ .path = root_path ++ "src/audio/esd/SDL_esdaudio.c" }, .flags = c_flags.items });
         }
 
         if (sdl_options.audio_implementations.fusionsound) {
-            lib.addCSourceFile(root_path ++ "src/audio/fusionsound/SDL_fsaudio.c", c_flags.items);
+            lib.addCSourceFile(.{ .file = .{ .path = root_path ++ "src/audio/fusionsound/SDL_fsaudio.c" }, .flags = c_flags.items });
         }
 
         if (sdl_options.audio_implementations.haiku) {
-            lib.addCSourceFile(root_path ++ "src/audio/haiku/SDL_haikuaudio.cc", c_flags.items);
+            lib.addCSourceFile(.{ .file = .{ .path = root_path ++ "src/audio/haiku/SDL_haikuaudio.cc" }, .flags = c_flags.items });
         }
 
         if (sdl_options.audio_implementations.jack) {
-            lib.addCSourceFile(root_path ++ "src/audio/jack/SDL_jackaudio.c", c_flags.items);
+            lib.addCSourceFile(.{ .file = .{ .path = root_path ++ "src/audio/jack/SDL_jackaudio.c" }, .flags = c_flags.items });
         }
 
         if (sdl_options.audio_implementations.n3ds) {
-            lib.addCSourceFile(root_path ++ "src/audio/n3ds/SDL_n3dsaudio.c", c_flags.items);
+            lib.addCSourceFile(.{ .file = .{ .path = root_path ++ "src/audio/n3ds/SDL_n3dsaudio.c" }, .flags = c_flags.items });
         }
 
         if (sdl_options.audio_implementations.nacl) {
-            lib.addCSourceFile(root_path ++ "src/audio/nacl/SDL_naclaudio.c", c_flags.items);
+            lib.addCSourceFile(.{ .file = .{ .path = root_path ++ "src/audio/nacl/SDL_naclaudio.c" }, .flags = c_flags.items });
         }
 
         if (sdl_options.audio_implementations.nas) {
-            lib.addCSourceFile(root_path ++ "src/audio/nas/SDL_nasaudio.c", c_flags.items);
+            lib.addCSourceFile(.{ .file = .{ .path = root_path ++ "src/audio/nas/SDL_nasaudio.c" }, .flags = c_flags.items });
         }
 
         if (sdl_options.audio_implementations.netbsd) {
-            lib.addCSourceFile(root_path ++ "src/audio/netbsd/SDL_netbsdaudio.c", c_flags.items);
+            lib.addCSourceFile(.{ .file = .{ .path = root_path ++ "src/audio/netbsd/SDL_netbsdaudio.c" }, .flags = c_flags.items });
         }
 
         if (sdl_options.audio_implementations.openslES) {
-            lib.addCSourceFile(root_path ++ "src/audio/openslES/SDL_openslES.c", c_flags.items);
+            lib.addCSourceFile(.{ .file = .{ .path = root_path ++ "src/audio/openslES/SDL_openslES.c" }, .flags = c_flags.items });
             lib.linkSystemLibrary("OpenSLES");
         }
 
         if (sdl_options.audio_implementations.os2) {
-            lib.addCSourceFile(root_path ++ "src/audio/os2/SDL_os2audio.c", c_flags.items);
+            lib.addCSourceFile(.{ .file = .{ .path = root_path ++ "src/audio/os2/SDL_os2audio.c" }, .flags = c_flags.items });
         }
 
         if (sdl_options.audio_implementations.paudio) {
-            lib.addCSourceFile(root_path ++ "src/audio/paudio/SDL_paudio.c", c_flags.items);
+            lib.addCSourceFile(.{ .file = .{ .path = root_path ++ "src/audio/paudio/SDL_paudio.c" }, .flags = c_flags.items });
         }
 
         if (sdl_options.audio_implementations.pipewire) {
-            lib.addCSourceFile(root_path ++ "src/audio/pipewire/SDL_pipewire.c", c_flags.items);
+            lib.addCSourceFile(.{ .file = .{ .path = root_path ++ "src/audio/pipewire/SDL_pipewire.c" }, .flags = c_flags.items });
         }
 
         if (sdl_options.audio_implementations.ps2) {
-            lib.addCSourceFile(root_path ++ "src/audio/ps2/SDL_ps2audio.c", c_flags.items);
+            lib.addCSourceFile(.{ .file = .{ .path = root_path ++ "src/audio/ps2/SDL_ps2audio.c" }, .flags = c_flags.items });
         }
 
         if (sdl_options.audio_implementations.psp) {
-            lib.addCSourceFile(root_path ++ "src/audio/psp/SDL_pspaudio.c", c_flags.items);
+            lib.addCSourceFile(.{ .file = .{ .path = root_path ++ "src/audio/psp/SDL_pspaudio.c" }, .flags = c_flags.items });
         }
 
         if (sdl_options.audio_implementations.pulseaudio) {
-            lib.addCSourceFile(root_path ++ "src/audio/pulseaudio/SDL_pulseaudio.c", c_flags.items);
+            lib.addCSourceFile(.{ .file = .{ .path = root_path ++ "src/audio/pulseaudio/SDL_pulseaudio.c" }, .flags = c_flags.items });
         }
 
         if (sdl_options.audio_implementations.qsa) {
-            lib.addCSourceFile(root_path ++ "src/audio/qsa/SDL_qsa_audio.c", c_flags.items);
+            lib.addCSourceFile(.{ .file = .{ .path = root_path ++ "src/audio/qsa/SDL_qsa_audio.c" }, .flags = c_flags.items });
         }
 
         if (sdl_options.audio_implementations.sndio) {
-            lib.addCSourceFile(root_path ++ "src/audio/sndio/SDL_sndioaudio.c", c_flags.items);
+            lib.addCSourceFile(.{ .file = .{ .path = root_path ++ "src/audio/sndio/SDL_sndioaudio.c" }, .flags = c_flags.items });
         }
 
         if (sdl_options.audio_implementations.sun) {
-            lib.addCSourceFile(root_path ++ "src/audio/sun/SDL_sunaudio.c", c_flags.items);
+            lib.addCSourceFile(.{ .file = .{ .path = root_path ++ "src/audio/sun/SDL_sunaudio.c" }, .flags = c_flags.items });
         }
 
         if (sdl_options.audio_implementations.vita) {
-            lib.addCSourceFile(root_path ++ "src/audio/vita/SDL_vitaaudio.c", c_flags.items);
+            lib.addCSourceFile(.{ .file = .{ .path = root_path ++ "src/audio/vita/SDL_vitaaudio.c" }, .flags = c_flags.items });
         }
 
         if (sdl_options.audio_implementations.wasapi) {
-            lib.addCSourceFile(root_path ++ "src/audio/wasapi/SDL_wasapi.c", c_flags.items);
-            lib.addCSourceFile(root_path ++ "src/audio/wasapi/SDL_wasapi_win32.c", c_flags.items);
-            lib.addCSourceFile(root_path ++ "src/audio/wasapi/SDL_wasapi_winrt.c", c_flags.items);
+            lib.addCSourceFile(.{ .file = .{ .path = root_path ++ "src/audio/wasapi/SDL_wasapi.c" }, .flags = c_flags.items });
+            lib.addCSourceFile(.{ .file = .{ .path = root_path ++ "src/audio/wasapi/SDL_wasapi_win32.c" }, .flags = c_flags.items });
+            lib.addCSourceFile(.{ .file = .{ .path = root_path ++ "src/audio/wasapi/SDL_wasapi_winrt.c" }, .flags = c_flags.items });
         }
 
         if (sdl_options.audio_implementations.winmm) {
-            lib.addCSourceFile(root_path ++ "src/audio/winmm/SDL_winmm.c", c_flags.items);
+            lib.addCSourceFile(.{ .file = .{ .path = root_path ++ "src/audio/winmm/SDL_winmm.c" }, .flags = c_flags.items });
         }
     } //audio implementations
 
@@ -1030,13 +1030,13 @@ pub fn createSDL(b: *std.Build, target: std.zig.CrossTarget, optimize: std.built
         }
 
         if (sdl_options.render_implementations.metal) {
-            lib.addCSourceFile(
-                root_path ++ "src/render/metal/SDL_render_metal.m",
-                try std.mem.concat(b.allocator, []const u8, &.{
+            lib.addCSourceFile(.{
+                .file = .{ .path = root_path ++ "src/render/metal/SDL_render_metal.m" },
+                .flags = try std.mem.concat(b.allocator, []const u8, &.{
                     &.{"-fobjc-arc"},
                     c_flags.items,
                 }),
-            );
+            });
         }
 
         if (sdl_options.render_implementations.opengl) {
@@ -1101,8 +1101,8 @@ pub fn applyLinkerArgs(b: *std.Build, target: std.zig.CrossTarget, lib: *std.Bui
                     @panic("Linux SDK must be an absolute path!");
                 }
 
-                lib.addIncludePath(b.fmt("{s}/include", .{linux_sdk_path}));
-                lib.addLibraryPath(b.fmt("{s}/lib/{s}", .{ linux_sdk_path, try target.linuxTriple(b.allocator) }));
+                lib.addIncludePath(.{ .path = b.fmt("{s}/include", .{linux_sdk_path}) });
+                lib.addLibraryPath(.{ .path = b.fmt("{s}/lib/{s}", .{ linux_sdk_path, try target.linuxTriple(b.allocator) }) });
             } else if (!target.isNative()) {
                 @panic("Linux SDK path must be provided when cross compiling!");
             }
@@ -1132,9 +1132,9 @@ pub fn applyLinkerArgs(b: *std.Build, target: std.zig.CrossTarget, lib: *std.Bui
                     @panic("MacOS SDK must be an absolute path!");
                 }
 
-                lib.addFrameworkPath(b.fmt("{s}/System/Library/Frameworks", .{osx_sdk_path}));
-                lib.addSystemIncludePath(b.fmt("{s}/usr/include", .{osx_sdk_path}));
-                lib.addLibraryPath(b.fmt("{s}/usr/lib", .{osx_sdk_path}));
+                lib.addFrameworkPath(.{ .path = b.fmt("{s}/System/Library/Frameworks", .{osx_sdk_path}) });
+                lib.addSystemIncludePath(.{ .path = b.fmt("{s}/usr/include", .{osx_sdk_path}) });
+                lib.addLibraryPath(.{ .path = b.fmt("{s}/usr/lib", .{osx_sdk_path}) });
             } else if (!target.isNative()) {
                 @panic("MacOS SDK path must be provided when cross compiling!");
             }
