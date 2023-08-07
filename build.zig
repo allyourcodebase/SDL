@@ -1108,7 +1108,11 @@ pub fn applyLinkerArgs(b: *std.Build, target: std.zig.CrossTarget, lib: *std.Bui
             }
 
             if (sdl_options.audio_implementations.pipewire) {
-                lib.linkSystemLibrary("libpipewire-0.3");
+                if (target.isNative()) {
+                    lib.linkSystemLibrary("libpipewire-0.3");
+                } else {
+                    lib.linkSystemLibrary("pipewire-0.3");
+                }
             }
             if (sdl_options.audio_implementations.alsa) {
                 lib.linkSystemLibrary("asound");
