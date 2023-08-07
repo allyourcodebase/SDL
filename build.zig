@@ -53,11 +53,13 @@ pub fn getDefaultOptionsForTarget(target: std.zig.CrossTarget) SdlOptions {
         options.audio_implementations.dummy = true;
         options.loadso_implementation = .dlopen;
 
-        options.video_sub_implementations.opengl_es = true;
+        //TODO: re-enable once the weird linker errors are fixed >:(
+        //      eg: error: use of undeclared identifier 'glBlendEquationOES'
+        // options.video_sub_implementations.opengl_es = true;
+        // options.render_implementations.opengles = true;
+
         options.video_sub_implementations.opengl_es2 = true;
         options.video_sub_implementations.opengl_egl = true;
-
-        options.render_implementations.opengles = true;
         options.render_implementations.opengles2 = true;
 
         options.shared = true;
@@ -429,10 +431,16 @@ pub fn createSDL(b: *std.Build, target: std.zig.CrossTarget, optimize: std.built
 
         if (sdl_options.video_sub_implementations.opengl_es) {
             lib.defineCMacro("SDL_VIDEO_OPENGL_ES", "1");
+            if (target.getAbi() == .android) {
+                lib.linkSystemLibrary("GLESv1_CM");
+            }
         }
 
         if (sdl_options.video_sub_implementations.opengl_es2) {
             lib.defineCMacro("SDL_VIDEO_OPENGL_ES2", "1");
+            if (target.getAbi() == .android) {
+                lib.linkSystemLibrary("GLESv2");
+            }
         }
 
         if (sdl_options.video_sub_implementations.opengl_egl) {
@@ -1082,7 +1090,7 @@ pub fn createSDL(b: *std.Build, target: std.zig.CrossTarget, optimize: std.built
         }
     } //render implementations
 
-    lib.installHeadersDirectory("include", "SDL2");
+    lib.installHeadersDirectory(root_path ++ "include", "SDL2");
 
     return lib;
 }
@@ -1090,6 +1098,11 @@ pub fn createSDL(b: *std.Build, target: std.zig.CrossTarget, optimize: std.built
 pub fn applyLinkerArgs(b: *std.Build, target: std.zig.CrossTarget, lib: *std.Build.CompileStep, sdl_options: SdlOptions) !void {
     switch (target.getOsTag()) {
         .linux => {
+            //Return early, android doesnt need anything from here
+            if (target.getAbi() == .android) {
+                return;
+            }
+
             if (sdl_options.linux_sdk_path) |linux_sdk_path| {
                 //If the last char is '/', throw an error
                 if (linux_sdk_path[linux_sdk_path.len - 1] == '/') {
