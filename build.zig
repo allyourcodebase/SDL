@@ -11,7 +11,7 @@ pub fn build(b: *std.Build) void {
     });
     const t = lib.target_info.target;
 
-    lib.addIncludePath("include");
+    lib.addIncludePath(.{ .path = "include" });
     lib.addCSourceFiles(&generic_src_files, &.{});
     lib.defineCMacro("SDL_USE_BUILTIN_OPENGL_DEFINITIONS", "1");
     lib.linkLibC();
