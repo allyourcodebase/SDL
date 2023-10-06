@@ -523,6 +523,8 @@ pub fn createSDL(b: *std.Build, target: std.zig.CrossTarget, optimize: std.built
     }
     if (!any_video_enabled) {
         lib.defineCMacro("SDL_VIDEO_DISABLED", "1");
+    } else {
+        lib.addCSourceFiles(&render_src_files, c_flags.items);
     }
 
     var any_joystick_enabled = false;
@@ -582,7 +584,7 @@ pub fn createSDL(b: *std.Build, target: std.zig.CrossTarget, optimize: std.built
         }
     }
     if (any_audio_enabled) {
-        lib.addCSourceFiles(&audio_src_files, try c_flags.toOwnedSlice());
+        lib.addCSourceFiles(&audio_src_files, c_flags.items);
     } else {
         lib.defineCMacro("SDL_AUDIO_DISABLED", "1");
     }
@@ -1301,6 +1303,12 @@ const audio_src_files = [_][]const u8{
     root_path ++ "src/audio/SDL_wave.c",
 };
 
+const render_src_files = [_][]const u8{
+    root_path ++ "src/render/SDL_d3dmath.c",
+    root_path ++ "src/render/SDL_render.c",
+    root_path ++ "src/render/SDL_yuv_sw.c",
+};
+
 const generic_src_files = [_][]const u8{
     root_path ++ "src/SDL.c",
     root_path ++ "src/SDL_assert.c",
@@ -1360,9 +1368,6 @@ const generic_src_files = [_][]const u8{
     root_path ++ "src/locale/SDL_locale.c",
     root_path ++ "src/misc/SDL_url.c",
     root_path ++ "src/power/SDL_power.c",
-    root_path ++ "src/render/SDL_d3dmath.c",
-    root_path ++ "src/render/SDL_render.c",
-    root_path ++ "src/render/SDL_yuv_sw.c",
     root_path ++ "src/sensor/SDL_sensor.c",
     root_path ++ "src/stdlib/SDL_crc16.c",
     root_path ++ "src/stdlib/SDL_crc32.c",
