@@ -523,9 +523,8 @@ pub fn createSDL(b: *std.Build, target: std.zig.CrossTarget, optimize: std.built
     }
     if (!any_video_enabled) {
         lib.defineCMacro("SDL_VIDEO_DISABLED", "1");
-    } else {
-        lib.addCSourceFiles(&video_src_files, c_flags.items);
-    }
+    } else {}
+    lib.addCSourceFiles(&video_src_files, c_flags.items);
 
     var any_joystick_enabled = false;
     const jiStructInfo: std.builtin.Type.Struct = @typeInfo(EnabledSdlJoystickImplementations).Struct;
@@ -583,9 +582,8 @@ pub fn createSDL(b: *std.Build, target: std.zig.CrossTarget, optimize: std.built
             any_audio_enabled = true;
         }
     }
-    if (any_audio_enabled) {
-        lib.addCSourceFiles(&audio_src_files, c_flags.items);
-    } else {
+    lib.addCSourceFiles(&audio_src_files, c_flags.items);
+    if (any_audio_enabled) {} else {
         lib.defineCMacro("SDL_AUDIO_DISABLED", "1");
     }
 
@@ -625,9 +623,8 @@ pub fn createSDL(b: *std.Build, target: std.zig.CrossTarget, optimize: std.built
             }
         }
     }
-    if (any_render_enabled) {
-        lib.addCSourceFiles(&render_src_files, c_flags.items);
-    } else {
+    lib.addCSourceFiles(&render_src_files, c_flags.items);
+    if (any_render_enabled) {} else {
         lib.defineCMacro("SDL_RENDER_DISABLED", "1");
     }
 
@@ -1214,7 +1211,9 @@ pub fn build(b: *std.Build) !void {
     var disable_video_sub_implementations = b.option(bool, "disable_video_sub_implementations", "Disables the sub video implementations") orelse false;
 
     if (disable_audio) options.audio_implementations = .{};
-    if (disable_render) options.render_implementations = .{};
+    if (disable_render) options.render_implementations = .{
+        .software = false,
+    };
     if (disable_joystick) {
         options.joystick_implementations = .{};
         options.haptic_implementation = .dummy;
