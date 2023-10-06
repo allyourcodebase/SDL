@@ -523,6 +523,8 @@ pub fn createSDL(b: *std.Build, target: std.zig.CrossTarget, optimize: std.built
     }
     if (!any_video_enabled) {
         lib.defineCMacro("SDL_VIDEO_DISABLED", "1");
+    } else {
+        lib.addCSourceFiles(&video_src_files, c_flags.items);
     }
 
     var any_joystick_enabled = false;
@@ -1313,6 +1315,35 @@ const render_src_files = [_][]const u8{
     root_path ++ "src/render/SDL_yuv_sw.c",
 };
 
+const video_src_files = [_][]const u8{
+    root_path ++ "src/video/SDL_RLEaccel.c",
+    root_path ++ "src/video/SDL_blit.c",
+    root_path ++ "src/video/SDL_blit_0.c",
+    root_path ++ "src/video/SDL_blit_1.c",
+    root_path ++ "src/video/SDL_blit_A.c",
+    root_path ++ "src/video/SDL_blit_N.c",
+    root_path ++ "src/video/SDL_blit_auto.c",
+    root_path ++ "src/video/SDL_blit_copy.c",
+    root_path ++ "src/video/SDL_blit_slow.c",
+    root_path ++ "src/video/SDL_bmp.c",
+    root_path ++ "src/video/SDL_clipboard.c",
+    root_path ++ "src/video/SDL_egl.c",
+    root_path ++ "src/video/SDL_fillrect.c",
+    root_path ++ "src/video/SDL_pixels.c",
+    root_path ++ "src/video/SDL_rect.c",
+    root_path ++ "src/video/SDL_shape.c",
+    root_path ++ "src/video/SDL_stretch.c",
+    root_path ++ "src/video/SDL_surface.c",
+    root_path ++ "src/video/SDL_video.c",
+    root_path ++ "src/video/SDL_vulkan_utils.c",
+    root_path ++ "src/video/SDL_yuv.c",
+    root_path ++ "src/video/yuv2rgb/yuv_rgb.c",
+
+    root_path ++ "src/video/dummy/SDL_nullevents.c",
+    root_path ++ "src/video/dummy/SDL_nullframebuffer.c",
+    root_path ++ "src/video/dummy/SDL_nullvideo.c",
+};
+
 const generic_src_files = [_][]const u8{
     root_path ++ "src/SDL.c",
     root_path ++ "src/SDL_assert.c",
@@ -1385,32 +1416,6 @@ const generic_src_files = [_][]const u8{
     root_path ++ "src/stdlib/SDL_strtokr.c",
     root_path ++ "src/thread/SDL_thread.c",
     root_path ++ "src/timer/SDL_timer.c",
-    root_path ++ "src/video/SDL_RLEaccel.c",
-    root_path ++ "src/video/SDL_blit.c",
-    root_path ++ "src/video/SDL_blit_0.c",
-    root_path ++ "src/video/SDL_blit_1.c",
-    root_path ++ "src/video/SDL_blit_A.c",
-    root_path ++ "src/video/SDL_blit_N.c",
-    root_path ++ "src/video/SDL_blit_auto.c",
-    root_path ++ "src/video/SDL_blit_copy.c",
-    root_path ++ "src/video/SDL_blit_slow.c",
-    root_path ++ "src/video/SDL_bmp.c",
-    root_path ++ "src/video/SDL_clipboard.c",
-    root_path ++ "src/video/SDL_egl.c",
-    root_path ++ "src/video/SDL_fillrect.c",
-    root_path ++ "src/video/SDL_pixels.c",
-    root_path ++ "src/video/SDL_rect.c",
-    root_path ++ "src/video/SDL_shape.c",
-    root_path ++ "src/video/SDL_stretch.c",
-    root_path ++ "src/video/SDL_surface.c",
-    root_path ++ "src/video/SDL_video.c",
-    root_path ++ "src/video/SDL_vulkan_utils.c",
-    root_path ++ "src/video/SDL_yuv.c",
-    root_path ++ "src/video/yuv2rgb/yuv_rgb.c",
-
-    root_path ++ "src/video/dummy/SDL_nullevents.c",
-    root_path ++ "src/video/dummy/SDL_nullframebuffer.c",
-    root_path ++ "src/video/dummy/SDL_nullvideo.c",
 
     // root_path ++ "src/render/software/SDL_blendfillrect.c",
     // root_path ++ "src/render/software/SDL_blendline.c",
