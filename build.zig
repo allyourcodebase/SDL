@@ -544,8 +544,9 @@ pub fn createSDL(b: *std.Build, target: std.zig.CrossTarget, optimize: std.built
         }
     }
 
+    var any_audio_enabled = false;
     const aiStructInfo: std.builtin.Type.Struct = @typeInfo(EnabledSdlAudioImplementations).Struct;
-    //Iterate over all fields on the video implementations struct
+    //Iterate over all fields on the audio implementations struct
     inline for (aiStructInfo.fields) |field| {
         var enabled: bool = @field(sdl_options.audio_implementations, field.name);
         //If its enabled in the options
@@ -567,7 +568,13 @@ pub fn createSDL(b: *std.Build, target: std.zig.CrossTarget, optimize: std.built
                 lib.defineCMacro(name, "1");
                 // std.debug.print("enabling joystick driver {s} from {s} upper {s}\n", .{ name, field.name, try lazyToUpper(b.allocator, field.name) });
             }
+            any_audio_enabled = true;
         }
+    }
+    if (any_audio_enabled) {
+        lib.addCSourceFiles(&audio_src_files, try c_flags.toOwnedSlice());
+    } else {
+        lib.defineCMacro("SDL_AUDIO_DISABLED", "1");
     }
 
     const riStructInfo: std.builtin.Type.Struct = @typeInfo(EnabledSdlRenderImplementations).Struct;
@@ -1183,6 +1190,16 @@ pub fn build(b: *std.Build) !void {
 
     var options = getDefaultOptionsForTarget(target);
 
+    var disable_audio = b.option(bool, "disable_audio", "Disables the audio subsystems") orelse false;
+    var disable_render = b.option(bool, "disable_render", "Disables the render subsystems") orelse false;
+    var disable_joystick = b.option(bool, "disable_joystick", "Disables the joystick subsystems") orelse false;
+    var disable_video_sub_implementations = b.option(bool, "disable_video_sub_implementations", "Disables the sub video implementations") orelse false;
+
+    if (disable_audio) options.audio_implementations = .{};
+    if (disable_render) options.render_implementations = .{};
+    if (disable_joystick) options.joystick_implementations = .{};
+    if (disable_video_sub_implementations) options.video_sub_implementations = .{};
+
     options.shared = b.option(bool, "shared", "Whether to build a shared or static library") orelse false;
 
     options.osx_sdk_path = b.option([]const u8, "osx_sdk_path", "Path to a MacOS SDK, for cross compilation");
@@ -1262,6 +1279,15 @@ fn root() []const u8 {
 
 const root_path = root() ++ "/";
 
+const audio_src_files = [_][]const u8{
+    root_path ++ "src/audio/SDL_audio.c",
+    root_path ++ "src/audio/SDL_audiocvt.c",
+    root_path ++ "src/audio/SDL_audiodev.c",
+    root_path ++ "src/audio/SDL_audiotypecvt.c",
+    root_path ++ "src/audio/SDL_mixer.c",
+    root_path ++ "src/audio/SDL_wave.c",
+};
+
 const generic_src_files = [_][]const u8{
     root_path ++ "src/SDL.c",
     root_path ++ "src/SDL_assert.c",
@@ -1274,12 +1300,6 @@ const generic_src_files = [_][]const u8{
     root_path ++ "src/SDL_utils.c",
     root_path ++ "src/atomic/SDL_atomic.c",
     root_path ++ "src/atomic/SDL_spinlock.c",
-    root_path ++ "src/audio/SDL_audio.c",
-    root_path ++ "src/audio/SDL_audiocvt.c",
-    root_path ++ "src/audio/SDL_audiodev.c",
-    root_path ++ "src/audio/SDL_audiotypecvt.c",
-    root_path ++ "src/audio/SDL_mixer.c",
-    root_path ++ "src/audio/SDL_wave.c",
     root_path ++ "src/cpuinfo/SDL_cpuinfo.c",
     root_path ++ "src/dynapi/SDL_dynapi.c",
     root_path ++ "src/events/SDL_clipboardevents.c",
