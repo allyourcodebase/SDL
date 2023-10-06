@@ -498,6 +498,7 @@ pub fn createSDL(b: *std.Build, target: std.zig.CrossTarget, optimize: std.built
         lib.defineCMacro(try std.mem.concat(b.allocator, u8, &.{ "SDL_HAPTIC_", try lazyToUpper(b.allocator, @tagName(sdl_options.haptic_implementation)) }), "1");
     }
 
+    var any_video_enabled = false;
     const viStructInfo: std.builtin.Type.Struct = @typeInfo(EnabledSdlVideoImplementations).Struct;
     //Iterate over all fields on the video implementations struct
     inline for (viStructInfo.fields) |field| {
@@ -517,9 +518,14 @@ pub fn createSDL(b: *std.Build, target: std.zig.CrossTarget, optimize: std.built
                 lib.defineCMacro(name, "1");
                 // std.debug.print("enabling video driver {s} from {s} upper {s}\n", .{ name, field.name, try lazyToUpper(b.allocator, field.name) });
             }
+            any_video_enabled = true;
         }
     }
+    if (!any_video_enabled) {
+        lib.defineCMacro("SDL_VIDEO_DISABLED", "1");
+    }
 
+    var any_joystick_enabled = false;
     const jiStructInfo: std.builtin.Type.Struct = @typeInfo(EnabledSdlJoystickImplementations).Struct;
     //Iterate over all fields on the video implementations struct
     inline for (jiStructInfo.fields) |field| {
@@ -541,7 +547,11 @@ pub fn createSDL(b: *std.Build, target: std.zig.CrossTarget, optimize: std.built
                 lib.defineCMacro(name, "1");
                 // std.debug.print("enabling joystick driver {s} from {s} upper {s}\n", .{ name, field.name, try lazyToUpper(b.allocator, field.name) });
             }
+            any_joystick_enabled = true;
         }
+    }
+    if (!any_joystick_enabled) {
+        lib.defineCMacro("SDL_JOYSTICK_DISABLED", "1");
     }
 
     var any_audio_enabled = false;
