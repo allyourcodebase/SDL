@@ -523,8 +523,6 @@ pub fn createSDL(b: *std.Build, target: std.zig.CrossTarget, optimize: std.built
     }
     if (!any_video_enabled) {
         lib.defineCMacro("SDL_VIDEO_DISABLED", "1");
-    } else {
-        lib.addCSourceFiles(&render_src_files, c_flags.items);
     }
 
     var any_joystick_enabled = false;
@@ -589,6 +587,7 @@ pub fn createSDL(b: *std.Build, target: std.zig.CrossTarget, optimize: std.built
         lib.defineCMacro("SDL_AUDIO_DISABLED", "1");
     }
 
+    var any_render_enabled = false;
     const riStructInfo: std.builtin.Type.Struct = @typeInfo(EnabledSdlRenderImplementations).Struct;
     //Iterate over all fields on the video implementations struct
     inline for (riStructInfo.fields) |field| {
@@ -623,6 +622,11 @@ pub fn createSDL(b: *std.Build, target: std.zig.CrossTarget, optimize: std.built
                 // std.debug.print("enabling joystick driver {s} from {s} upper {s}\n", .{ name, field.name, try lazyToUpper(b.allocator, field.name) });
             }
         }
+    }
+    if (any_render_enabled) {
+        lib.addCSourceFiles(&render_src_files, c_flags.items);
+    } else {
+        lib.defineCMacro("SDL_RENDER_DISABLED", "1");
     }
 
     switch (target.getOsTag()) {
