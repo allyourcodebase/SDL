@@ -1207,7 +1207,10 @@ pub fn build(b: *std.Build) !void {
 
     if (disable_audio) options.audio_implementations = .{};
     if (disable_render) options.render_implementations = .{};
-    if (disable_joystick) options.joystick_implementations = .{};
+    if (disable_joystick) {
+        options.joystick_implementations = .{};
+        options.haptic_implementation = .dummy;
+    }
     if (disable_video_sub_implementations) options.video_sub_implementations = .{};
 
     options.shared = b.option(bool, "shared", "Whether to build a shared or static library") orelse false;
