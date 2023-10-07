@@ -264,15 +264,15 @@ typedef unsigned int uintptr_t;
 #ifdef HAVE_WINDOWS_GAMING_INPUT_H
 #define SDL_JOYSTICK_WGI 1
 #endif
-#define SDL_JOYSTICK_XINPUT 1
-#define SDL_HAPTIC_DINPUT 1
-#define SDL_HAPTIC_XINPUT 1
+// #define SDL_JOYSTICK_XINPUT 1
+// #define SDL_HAPTIC_DINPUT 1
+// #define SDL_HAPTIC_XINPUT 1
 
 /* Enable the sensor driver */
 #ifdef HAVE_SENSORSAPI_H
-#define SDL_SENSOR_WINDOWS 1
+// #define SDL_SENSOR_WINDOWS 1
 #else
-#define SDL_SENSOR_DUMMY 1
+// #define SDL_SENSOR_DUMMY 1
 #endif
 
 /* Enable various shared object loading systems */
@@ -280,23 +280,23 @@ typedef unsigned int uintptr_t;
 
 /* Enable various threading systems */
 #define SDL_THREAD_GENERIC_COND_SUFFIX 1
-#define SDL_THREAD_WINDOWS 1
+// #define SDL_THREAD_WINDOWS 1
 
 /* Enable various timer systems */
-#define SDL_TIMER_WINDOWS 1
+// #define SDL_TIMER_WINDOWS 1
 
 /* Enable various video drivers */
-#define SDL_VIDEO_DRIVER_DUMMY 1
-#define SDL_VIDEO_DRIVER_WINDOWS 1
+// #define SDL_VIDEO_DRIVER_DUMMY 1
+// #define SDL_VIDEO_DRIVER_WINDOWS 1
 
 #ifndef SDL_VIDEO_RENDER_D3D
-#define SDL_VIDEO_RENDER_D3D 1
+// #define SDL_VIDEO_RENDER_D3D 1
 #endif
 #if !defined(SDL_VIDEO_RENDER_D3D11) && defined(HAVE_D3D11_H)
-#define SDL_VIDEO_RENDER_D3D11 1
+// #define SDL_VIDEO_RENDER_D3D11 1
 #endif
 #if !defined(SDL_VIDEO_RENDER_D3D12) && defined(HAVE_D3D12_H)
-#define SDL_VIDEO_RENDER_D3D12 1
+// #define SDL_VIDEO_RENDER_D3D12 1
 #endif
 
 /* Enable OpenGL support */
