@@ -385,7 +385,8 @@ pub fn lazyToUpper(allocator: std.mem.Allocator, str: []const u8) ![]const u8 {
     return upper;
 }
 
-pub fn createSDL(b: *std.Build, target: std.zig.CrossTarget, optimize: std.builtin.OptimizeMode, sdl_options: SdlOptions) !*std.build.CompileStep {
+pub fn createSDL(b: *std.Build, target: std.zig.CrossTarget, optimize: std.builtin.OptimizeMode, _sdl_options: SdlOptions) !*std.build.CompileStep {
+    var sdl_options = _sdl_options;
     const options = .{
         .name = "SDL2",
         .target = target,
@@ -553,6 +554,7 @@ pub fn createSDL(b: *std.Build, target: std.zig.CrossTarget, optimize: std.built
     }
     if (!any_joystick_enabled) {
         lib.defineCMacro("SDL_JOYSTICK_DISABLED", "1");
+        sdl_options.joystick_implementations.dummy = true;
     }
 
     var any_audio_enabled = false;
