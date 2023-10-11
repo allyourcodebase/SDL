@@ -470,7 +470,7 @@ pub fn createSDL(b: *std.Build, target: std.zig.CrossTarget, optimize: std.built
     } //SDL_VIDEO_X
 
     lib.addIncludePath(.{ .path = root_path ++ "include" });
-    lib.addCSourceFiles(&generic_src_files, c_flags.items);
+    lib.addCSourceFiles(.{ .files = &generic_src_files, .flags = c_flags.items });
     lib.defineCMacro("SDL_USE_BUILTIN_OPENGL_DEFINITIONS", "1");
 
     lib.linkLibC();
@@ -525,7 +525,7 @@ pub fn createSDL(b: *std.Build, target: std.zig.CrossTarget, optimize: std.built
     if (!any_video_enabled) {
         lib.defineCMacro("SDL_VIDEO_DISABLED", "1");
     } else {}
-    lib.addCSourceFiles(&video_src_files, c_flags.items);
+    lib.addCSourceFiles(.{ .files = &video_src_files, .flags = c_flags.items });
 
     var any_joystick_enabled = false;
     const jiStructInfo: std.builtin.Type.Struct = @typeInfo(EnabledSdlJoystickImplementations).Struct;
@@ -584,7 +584,7 @@ pub fn createSDL(b: *std.Build, target: std.zig.CrossTarget, optimize: std.built
             any_audio_enabled = true;
         }
     }
-    lib.addCSourceFiles(&audio_src_files, c_flags.items);
+    lib.addCSourceFiles(.{ .files = &audio_src_files, .flags = c_flags.items });
     if (any_audio_enabled) {} else {
         lib.defineCMacro("SDL_AUDIO_DISABLED", "1");
     }
@@ -625,7 +625,7 @@ pub fn createSDL(b: *std.Build, target: std.zig.CrossTarget, optimize: std.built
             }
         }
     }
-    lib.addCSourceFiles(&render_src_files, c_flags.items);
+    lib.addCSourceFiles(.{ .files = &render_src_files, .flags = c_flags.items });
     if (any_render_enabled) {} else {
         lib.defineCMacro("SDL_RENDER_DISABLED", "1");
     }
@@ -633,7 +633,7 @@ pub fn createSDL(b: *std.Build, target: std.zig.CrossTarget, optimize: std.built
     switch (target.getOsTag()) {
         //TODO: figure out why when linking against our built SDL it causes a linker failure `__stack_chk_fail was replaced` on windows
         .windows => {
-            lib.addCSourceFiles(&windows_src_files, c_flags.items);
+            lib.addCSourceFiles(.{ .files = &windows_src_files, .flags = c_flags.items });
 
             lib.linkSystemLibrary("setupapi");
             lib.linkSystemLibrary("winmm");
@@ -644,16 +644,16 @@ pub fn createSDL(b: *std.Build, target: std.zig.CrossTarget, optimize: std.built
             lib.linkSystemLibrary("ole32");
         },
         .macos => {
-            lib.addCSourceFiles(&darwin_src_files, c_flags.items);
+            lib.addCSourceFiles(.{ .files = &darwin_src_files, .flags = c_flags.items });
 
             var obj_flags = try std.mem.concat(b.allocator, []const u8, &.{ &.{"-fobjc-arc"}, c_flags.items });
-            lib.addCSourceFiles(&objective_c_src_files, obj_flags);
+            lib.addCSourceFiles(.{ .files = &objective_c_src_files, .flags = obj_flags });
         },
         .linux => {
             if (target.getAbi() == .android) {
-                lib.addCSourceFiles(&android_src_files, c_flags.items);
+                lib.addCSourceFiles(.{ .files = &android_src_files, .flags = c_flags.items });
             } else {
-                lib.addCSourceFiles(&linux_src_files, c_flags.items);
+                lib.addCSourceFiles(.{ .files = &linux_src_files, .flags = c_flags.items });
             }
         },
         else => {
@@ -672,18 +672,24 @@ pub fn createSDL(b: *std.Build, target: std.zig.CrossTarget, optimize: std.built
 
     switch (sdl_options.thread_implementation) {
         //stdcpp and ngage have cpp code, so lets add exceptions for those, since find_c_cpp_sources separates the found c/cpp files
-        .stdcpp => lib.addCSourceFiles((try find_c_cpp_sources(b.allocator, root_path ++ "src/thread/stdcpp/")).cpp, c_flags.items),
-        .ngage => lib.addCSourceFiles((try find_c_cpp_sources(b.allocator, root_path ++ "src/thread/ngage/")).cpp, c_flags.items),
+        .stdcpp => lib.addCSourceFiles(.{
+            .files = (try find_c_cpp_sources(b.allocator, root_path ++ "src/thread/stdcpp/")).cpp,
+            .flags = c_flags.items,
+        }),
+        .ngage => lib.addCSourceFiles(.{
+            .files = (try find_c_cpp_sources(b.allocator, root_path ++ "src/thread/ngage/")).cpp,
+            .flags = c_flags.items,
+        }),
         //Windows implementation of thread requires parts of the generic implementation,
         //not sure if this is fully correct (or if we need to define SDL_THREAD_GENERIC_COND_SUFFIX)
         //due to a linker error on Windows that happens earlier on, but it seems fine enough for now, and can be tested later
         .windows => {
             lib.addCSourceFile(.{ .file = .{ .path = root_path ++ "src/thread/generic/SDL_syscond.c" }, .flags = c_flags.items });
-            lib.addCSourceFiles((try find_c_cpp_sources(b.allocator, root_path ++ "src/thread/windows/")).c, c_flags.items);
+            lib.addCSourceFiles(.{ .files = (try find_c_cpp_sources(b.allocator, root_path ++ "src/thread/windows/")).c, .flags = c_flags.items });
         },
         else => |value| {
             const path = try std.mem.concat(b.allocator, u8, &.{ root_path, "src/thread/", @tagName(value), "/" });
-            lib.addCSourceFiles((try find_c_cpp_sources(b.allocator, path)).c, c_flags.items);
+            lib.addCSourceFiles(.{ .files = (try find_c_cpp_sources(b.allocator, path)).c, .flags = c_flags.items });
         },
     }
 
@@ -736,7 +742,7 @@ pub fn createSDL(b: *std.Build, target: std.zig.CrossTarget, optimize: std.built
 
             var src_files = try find_c_cpp_sources(b.allocator, root_path ++ "src/video/x11/");
 
-            lib.addCSourceFiles(src_files.c, c_flags.items);
+            lib.addCSourceFiles(.{ .files = src_files.c, .flags = c_flags.items });
         }
 
         if (sdl_options.video_implementations.wayland) {
@@ -750,19 +756,19 @@ pub fn createSDL(b: *std.Build, target: std.zig.CrossTarget, optimize: std.built
             lib.addIncludePath(.{ .path = root_path ++ "include/wayland-protocols" });
 
             var src_files = try find_c_cpp_sources(b.allocator, root_path ++ "src/video/wayland/");
-            lib.addCSourceFiles(src_files.c, c_flags.items);
+            lib.addCSourceFiles(.{ .files = src_files.c, .flags = c_flags.items });
         }
 
         if (sdl_options.video_implementations.windows) {
             var src_files = try find_c_cpp_sources(b.allocator, root_path ++ "src/video/windows/");
 
-            lib.addCSourceFiles(src_files.c, c_flags.items);
+            lib.addCSourceFiles(.{ .files = src_files.c, .flags = c_flags.items });
         }
 
         if (sdl_options.video_implementations.android) {
             var src_files = try find_c_cpp_sources(b.allocator, root_path ++ "src/video/android/");
 
-            lib.addCSourceFiles(src_files.c, c_flags.items);
+            lib.addCSourceFiles(.{ .files = src_files.c, .flags = c_flags.items });
         }
 
         //TODO: the rest of the video implementations
@@ -1034,31 +1040,31 @@ pub fn createSDL(b: *std.Build, target: std.zig.CrossTarget, optimize: std.built
         if (sdl_options.render_implementations.software) {
             var source = try find_c_cpp_sources(b.allocator, root_path ++ "src/render/software/");
 
-            lib.addCSourceFiles(
-                source.c,
-                c_flags.items,
-            );
+            lib.addCSourceFiles(.{
+                .files = source.c,
+                .flags = c_flags.items,
+            });
         }
 
         if (sdl_options.render_implementations.direct3d) {
-            lib.addCSourceFiles(
-                (try find_c_cpp_sources(b.allocator, root_path ++ "src/render/direct3d/")).c,
-                c_flags.items,
-            );
+            lib.addCSourceFiles(.{
+                .files = (try find_c_cpp_sources(b.allocator, root_path ++ "src/render/direct3d/")).c,
+                .flags = c_flags.items,
+            });
         }
 
         if (sdl_options.render_implementations.direct3d11) {
-            lib.addCSourceFiles(
-                (try find_c_cpp_sources(b.allocator, root_path ++ "src/render/direct3d11/")).c,
-                c_flags.items,
-            );
+            lib.addCSourceFiles(.{
+                .files = (try find_c_cpp_sources(b.allocator, root_path ++ "src/render/direct3d11/")).c,
+                .flags = c_flags.items,
+            });
         }
 
         if (sdl_options.render_implementations.direct3d12) {
-            lib.addCSourceFiles(
-                (try find_c_cpp_sources(b.allocator, root_path ++ "src/render/direct3d12/")).c,
-                c_flags.items,
-            );
+            lib.addCSourceFiles(.{
+                .files = (try find_c_cpp_sources(b.allocator, root_path ++ "src/render/direct3d12/")).c,
+                .flags = c_flags.items,
+            });
         }
 
         if (sdl_options.render_implementations.metal) {
@@ -1072,45 +1078,45 @@ pub fn createSDL(b: *std.Build, target: std.zig.CrossTarget, optimize: std.built
         }
 
         if (sdl_options.render_implementations.opengl) {
-            lib.addCSourceFiles(
-                (try find_c_cpp_sources(b.allocator, root_path ++ "src/render/opengl/")).c,
-                c_flags.items,
-            );
+            lib.addCSourceFiles(.{
+                .files = (try find_c_cpp_sources(b.allocator, root_path ++ "src/render/opengl/")).c,
+                .flags = c_flags.items,
+            });
         }
 
         if (sdl_options.render_implementations.opengles) {
-            lib.addCSourceFiles(
-                (try find_c_cpp_sources(b.allocator, root_path ++ "src/render/opengles/")).c,
-                c_flags.items,
-            );
+            lib.addCSourceFiles(.{
+                .files = (try find_c_cpp_sources(b.allocator, root_path ++ "src/render/opengles/")).c,
+                .flags = c_flags.items,
+            });
         }
 
         if (sdl_options.render_implementations.opengles2) {
-            lib.addCSourceFiles(
-                (try find_c_cpp_sources(b.allocator, root_path ++ "src/render/opengles2/")).c,
-                c_flags.items,
-            );
+            lib.addCSourceFiles(.{
+                .files = (try find_c_cpp_sources(b.allocator, root_path ++ "src/render/opengles2/")).c,
+                .flags = c_flags.items,
+            });
         }
 
         if (sdl_options.render_implementations.ps2) {
-            lib.addCSourceFiles(
-                (try find_c_cpp_sources(b.allocator, root_path ++ "src/render/ps2/")).c,
-                c_flags.items,
-            );
+            lib.addCSourceFiles(.{
+                .files = (try find_c_cpp_sources(b.allocator, root_path ++ "src/render/ps2/")).c,
+                .flags = c_flags.items,
+            });
         }
 
         if (sdl_options.render_implementations.psp) {
-            lib.addCSourceFiles(
-                (try find_c_cpp_sources(b.allocator, root_path ++ "src/render/psp/")).c,
-                c_flags.items,
-            );
+            lib.addCSourceFiles(.{
+                .files = (try find_c_cpp_sources(b.allocator, root_path ++ "src/render/psp/")).c,
+                .flags = c_flags.items,
+            });
         }
 
         if (sdl_options.render_implementations.vitagxm) {
-            lib.addCSourceFiles(
-                (try find_c_cpp_sources(b.allocator, root_path ++ "src/render/vitagxm/")).c,
-                c_flags.items,
-            );
+            lib.addCSourceFiles(.{
+                .files = (try find_c_cpp_sources(b.allocator, root_path ++ "src/render/vitagxm/")).c,
+                .flags = c_flags.items,
+            });
         }
     } //render implementations
 

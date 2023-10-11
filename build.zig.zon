@@ -2,4 +2,12 @@
     .name = "SDL",
     .version = "2.26.3-2",
     .dependencies = .{},
+    .paths = .{
+        "src/",
+        "include/",
+        "wayland-protocols/",
+        "examples/",
+        "build.zig",
+        "build.zig.zon",
+    },
 }
