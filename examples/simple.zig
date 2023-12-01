@@ -9,7 +9,7 @@ pub fn main() !void {
     }
     defer c.SDL_Quit();
 
-    var window = c.SDL_CreateWindow("Test SDL+Zig", c.SDL_WINDOWPOS_UNDEFINED, c.SDL_WINDOWPOS_UNDEFINED, 800, 600, 0).?;
+    const window = c.SDL_CreateWindow("Test SDL+Zig", c.SDL_WINDOWPOS_UNDEFINED, c.SDL_WINDOWPOS_UNDEFINED, 800, 600, 0).?;
     defer c.SDL_DestroyWindow(window);
 
     var run: bool = true;

@@ -44,6 +44,7 @@ pub fn getDefaultOptionsForTarget(target: std.zig.CrossTarget) SdlOptions {
         options.joystick_implementations.virtual = true;
         options.joystick_implementations.dummy = true;
         options.locale_implementation = SdlLocaleImplementation.android;
+
         options.power_implementation = SdlPowerImplementation.android;
         options.thread_implementation = SdlThreadImplementation.pthread;
         options.timer_implementation = SdlTimerImplementation.unix;
@@ -503,7 +504,7 @@ pub fn createSDL(b: *std.Build, target: std.zig.CrossTarget, optimize: std.built
     const viStructInfo: std.builtin.Type.Struct = @typeInfo(EnabledSdlVideoImplementations).Struct;
     //Iterate over all fields on the video implementations struct
     inline for (viStructInfo.fields) |field| {
-        var enabled: bool = @field(sdl_options.video_implementations, field.name);
+        const enabled: bool = @field(sdl_options.video_implementations, field.name);
         //If its enabled in the options
         if (enabled) {
             //they arent consistent with their naming always :/
@@ -511,7 +512,7 @@ pub fn createSDL(b: *std.Build, target: std.zig.CrossTarget, optimize: std.built
                 lib.defineCMacro("SDL_VIDEO_DRIVER_RPI", "1");
             } else {
                 //Make the macro name
-                var name = try std.mem.concat(b.allocator, u8, &.{
+                const name = try std.mem.concat(b.allocator, u8, &.{
                     "SDL_VIDEO_DRIVER_",
                     try lazyToUpper(b.allocator, field.name),
                 });
@@ -531,7 +532,7 @@ pub fn createSDL(b: *std.Build, target: std.zig.CrossTarget, optimize: std.built
     const jiStructInfo: std.builtin.Type.Struct = @typeInfo(EnabledSdlJoystickImplementations).Struct;
     //Iterate over all fields on the video implementations struct
     inline for (jiStructInfo.fields) |field| {
-        var enabled: bool = @field(sdl_options.joystick_implementations, field.name);
+        const enabled: bool = @field(sdl_options.joystick_implementations, field.name);
         //If its enabled in the options
         if (enabled) {
             //they arent consistent with their naming always :/
@@ -541,7 +542,7 @@ pub fn createSDL(b: *std.Build, target: std.zig.CrossTarget, optimize: std.built
                 lib.defineCMacro("SDL_JOYSTICK_USBHID", "1");
             } else {
                 //Make the macro name
-                var name = try std.mem.concat(b.allocator, u8, &.{
+                const name = try std.mem.concat(b.allocator, u8, &.{
                     "SDL_JOYSTICK_",
                     try lazyToUpper(b.allocator, field.name),
                 });
@@ -561,7 +562,7 @@ pub fn createSDL(b: *std.Build, target: std.zig.CrossTarget, optimize: std.built
     const aiStructInfo: std.builtin.Type.Struct = @typeInfo(EnabledSdlAudioImplementations).Struct;
     //Iterate over all fields on the audio implementations struct
     inline for (aiStructInfo.fields) |field| {
-        var enabled: bool = @field(sdl_options.audio_implementations, field.name);
+        const enabled: bool = @field(sdl_options.audio_implementations, field.name);
         //If its enabled in the options
         if (enabled) {
             //they arent consistent with their naming always :/
@@ -573,7 +574,7 @@ pub fn createSDL(b: *std.Build, target: std.zig.CrossTarget, optimize: std.built
                 lib.defineCMacro("SDL_AUDIO_DRIVER_OSS", "1");
             } else {
                 //Make the macro name
-                var name = try std.mem.concat(b.allocator, u8, &.{
+                const name = try std.mem.concat(b.allocator, u8, &.{
                     "SDL_AUDIO_DRIVER_",
                     try lazyToUpper(b.allocator, field.name),
                 });
@@ -589,11 +590,11 @@ pub fn createSDL(b: *std.Build, target: std.zig.CrossTarget, optimize: std.built
         lib.defineCMacro("SDL_AUDIO_DISABLED", "1");
     }
 
-    var any_render_enabled = false;
+    const any_render_enabled = false;
     const riStructInfo: std.builtin.Type.Struct = @typeInfo(EnabledSdlRenderImplementations).Struct;
     //Iterate over all fields on the video implementations struct
     inline for (riStructInfo.fields) |field| {
-        var enabled: bool = @field(sdl_options.render_implementations, field.name);
+        const enabled: bool = @field(sdl_options.render_implementations, field.name);
         //If its enabled in the options
         if (enabled) {
             //they arent consistent with their naming always :/
@@ -615,7 +616,7 @@ pub fn createSDL(b: *std.Build, target: std.zig.CrossTarget, optimize: std.built
                 lib.defineCMacro("SDL_VIDEO_RENDER_VITA_GXM", "1");
             } else {
                 //Make the macro name
-                var name = try std.mem.concat(b.allocator, u8, &.{
+                const name = try std.mem.concat(b.allocator, u8, &.{
                     "SDL_VIDEO_RENDER_",
                     try lazyToUpper(b.allocator, field.name),
                 });
@@ -646,7 +647,7 @@ pub fn createSDL(b: *std.Build, target: std.zig.CrossTarget, optimize: std.built
         .macos => {
             lib.addCSourceFiles(.{ .files = &darwin_src_files, .flags = c_flags.items });
 
-            var obj_flags = try std.mem.concat(b.allocator, []const u8, &.{ &.{"-fobjc-arc"}, c_flags.items });
+            const obj_flags = try std.mem.concat(b.allocator, []const u8, &.{ &.{"-fobjc-arc"}, c_flags.items });
             lib.addCSourceFiles(.{ .files = &objective_c_src_files, .flags = obj_flags });
         },
         .linux => {
@@ -673,11 +674,11 @@ pub fn createSDL(b: *std.Build, target: std.zig.CrossTarget, optimize: std.built
     switch (sdl_options.thread_implementation) {
         //stdcpp and ngage have cpp code, so lets add exceptions for those, since find_c_cpp_sources separates the found c/cpp files
         .stdcpp => lib.addCSourceFiles(.{
-            .files = (try find_c_cpp_sources(b.allocator, root_path ++ "src/thread/stdcpp/")).cpp,
+            .files = (try findCSources(b.allocator, root_path ++ "src/thread/stdcpp/")).cpp,
             .flags = c_flags.items,
         }),
         .ngage => lib.addCSourceFiles(.{
-            .files = (try find_c_cpp_sources(b.allocator, root_path ++ "src/thread/ngage/")).cpp,
+            .files = (try findCSources(b.allocator, root_path ++ "src/thread/ngage/")).cpp,
             .flags = c_flags.items,
         }),
         //Windows implementation of thread requires parts of the generic implementation,
@@ -685,11 +686,11 @@ pub fn createSDL(b: *std.Build, target: std.zig.CrossTarget, optimize: std.built
         //due to a linker error on Windows that happens earlier on, but it seems fine enough for now, and can be tested later
         .windows => {
             lib.addCSourceFile(.{ .file = .{ .path = root_path ++ "src/thread/generic/SDL_syscond.c" }, .flags = c_flags.items });
-            lib.addCSourceFiles(.{ .files = (try find_c_cpp_sources(b.allocator, root_path ++ "src/thread/windows/")).c, .flags = c_flags.items });
+            lib.addCSourceFiles(.{ .files = (try findCSources(b.allocator, root_path ++ "src/thread/windows/")).c, .flags = c_flags.items });
         },
         else => |value| {
             const path = try std.mem.concat(b.allocator, u8, &.{ root_path, "src/thread/", @tagName(value), "/" });
-            lib.addCSourceFiles(.{ .files = (try find_c_cpp_sources(b.allocator, path)).c, .flags = c_flags.items });
+            lib.addCSourceFiles(.{ .files = (try findCSources(b.allocator, path)).c, .flags = c_flags.items });
         },
     }
 
@@ -740,7 +741,7 @@ pub fn createSDL(b: *std.Build, target: std.zig.CrossTarget, optimize: std.built
             lib.linkSystemLibrary("X11");
             lib.linkSystemLibrary("Xext");
 
-            var src_files = try find_c_cpp_sources(b.allocator, root_path ++ "src/video/x11/");
+            const src_files = try findCSources(b.allocator, root_path ++ "src/video/x11/");
 
             lib.addCSourceFiles(.{ .files = src_files.c, .flags = c_flags.items });
         }
@@ -755,18 +756,18 @@ pub fn createSDL(b: *std.Build, target: std.zig.CrossTarget, optimize: std.built
 
             lib.addIncludePath(.{ .path = root_path ++ "include/wayland-protocols" });
 
-            var src_files = try find_c_cpp_sources(b.allocator, root_path ++ "src/video/wayland/");
+            const src_files = try findCSources(b.allocator, root_path ++ "src/video/wayland/");
             lib.addCSourceFiles(.{ .files = src_files.c, .flags = c_flags.items });
         }
 
         if (sdl_options.video_implementations.windows) {
-            var src_files = try find_c_cpp_sources(b.allocator, root_path ++ "src/video/windows/");
+            const src_files = try findCSources(b.allocator, root_path ++ "src/video/windows/");
 
             lib.addCSourceFiles(.{ .files = src_files.c, .flags = c_flags.items });
         }
 
         if (sdl_options.video_implementations.android) {
-            var src_files = try find_c_cpp_sources(b.allocator, root_path ++ "src/video/android/");
+            const src_files = try findCSources(b.allocator, root_path ++ "src/video/android/");
 
             lib.addCSourceFiles(.{ .files = src_files.c, .flags = c_flags.items });
         }
@@ -1038,7 +1039,7 @@ pub fn createSDL(b: *std.Build, target: std.zig.CrossTarget, optimize: std.built
 
     { //render implementations
         if (sdl_options.render_implementations.software) {
-            var source = try find_c_cpp_sources(b.allocator, root_path ++ "src/render/software/");
+            const source = try findCSources(b.allocator, root_path ++ "src/render/software/");
 
             lib.addCSourceFiles(.{
                 .files = source.c,
@@ -1048,21 +1049,21 @@ pub fn createSDL(b: *std.Build, target: std.zig.CrossTarget, optimize: std.built
 
         if (sdl_options.render_implementations.direct3d) {
             lib.addCSourceFiles(.{
-                .files = (try find_c_cpp_sources(b.allocator, root_path ++ "src/render/direct3d/")).c,
+                .files = (try findCSources(b.allocator, root_path ++ "src/render/direct3d/")).c,
                 .flags = c_flags.items,
             });
         }
 
         if (sdl_options.render_implementations.direct3d11) {
             lib.addCSourceFiles(.{
-                .files = (try find_c_cpp_sources(b.allocator, root_path ++ "src/render/direct3d11/")).c,
+                .files = (try findCSources(b.allocator, root_path ++ "src/render/direct3d11/")).c,
                 .flags = c_flags.items,
             });
         }
 
         if (sdl_options.render_implementations.direct3d12) {
             lib.addCSourceFiles(.{
-                .files = (try find_c_cpp_sources(b.allocator, root_path ++ "src/render/direct3d12/")).c,
+                .files = (try findCSources(b.allocator, root_path ++ "src/render/direct3d12/")).c,
                 .flags = c_flags.items,
             });
         }
@@ -1079,42 +1080,42 @@ pub fn createSDL(b: *std.Build, target: std.zig.CrossTarget, optimize: std.built
 
         if (sdl_options.render_implementations.opengl) {
             lib.addCSourceFiles(.{
-                .files = (try find_c_cpp_sources(b.allocator, root_path ++ "src/render/opengl/")).c,
+                .files = (try findCSources(b.allocator, root_path ++ "src/render/opengl/")).c,
                 .flags = c_flags.items,
             });
         }
 
         if (sdl_options.render_implementations.opengles) {
             lib.addCSourceFiles(.{
-                .files = (try find_c_cpp_sources(b.allocator, root_path ++ "src/render/opengles/")).c,
+                .files = (try findCSources(b.allocator, root_path ++ "src/render/opengles/")).c,
                 .flags = c_flags.items,
             });
         }
 
         if (sdl_options.render_implementations.opengles2) {
             lib.addCSourceFiles(.{
-                .files = (try find_c_cpp_sources(b.allocator, root_path ++ "src/render/opengles2/")).c,
+                .files = (try findCSources(b.allocator, root_path ++ "src/render/opengles2/")).c,
                 .flags = c_flags.items,
             });
         }
 
         if (sdl_options.render_implementations.ps2) {
             lib.addCSourceFiles(.{
-                .files = (try find_c_cpp_sources(b.allocator, root_path ++ "src/render/ps2/")).c,
+                .files = (try findCSources(b.allocator, root_path ++ "src/render/ps2/")).c,
                 .flags = c_flags.items,
             });
         }
 
         if (sdl_options.render_implementations.psp) {
             lib.addCSourceFiles(.{
-                .files = (try find_c_cpp_sources(b.allocator, root_path ++ "src/render/psp/")).c,
+                .files = (try findCSources(b.allocator, root_path ++ "src/render/psp/")).c,
                 .flags = c_flags.items,
             });
         }
 
         if (sdl_options.render_implementations.vitagxm) {
             lib.addCSourceFiles(.{
-                .files = (try find_c_cpp_sources(b.allocator, root_path ++ "src/render/vitagxm/")).c,
+                .files = (try findCSources(b.allocator, root_path ++ "src/render/vitagxm/")).c,
                 .flags = c_flags.items,
             });
         }
@@ -1213,10 +1214,10 @@ pub fn build(b: *std.Build) !void {
 
     var options = getDefaultOptionsForTarget(target);
 
-    var disable_audio = b.option(bool, "disable_audio", "Disables the audio subsystems") orelse false;
-    var disable_render = b.option(bool, "disable_render", "Disables the render subsystems") orelse false;
-    var disable_joystick = b.option(bool, "disable_joystick", "Disables the joystick subsystems") orelse false;
-    var disable_video_sub_implementations = b.option(bool, "disable_video_sub_implementations", "Disables the sub video implementations") orelse false;
+    const disable_audio = b.option(bool, "disable_audio", "Disables the audio subsystems") orelse false;
+    const disable_render = b.option(bool, "disable_render", "Disables the render subsystems") orelse false;
+    const disable_joystick = b.option(bool, "disable_joystick", "Disables the joystick subsystems") orelse false;
+    const disable_video_sub_implementations = b.option(bool, "disable_video_sub_implementations", "Disables the sub video implementations") orelse false;
 
     if (disable_audio) options.audio_implementations = .{};
     if (disable_render) options.render_implementations = .{
@@ -1233,7 +1234,7 @@ pub fn build(b: *std.Build) !void {
     options.osx_sdk_path = b.option([]const u8, "osx_sdk_path", "Path to a MacOS SDK, for cross compilation");
     options.linux_sdk_path = b.option([]const u8, "linux_sdk_path", "Path to a Linux SDK, for cross compilation");
 
-    var sdl = try createSDL(b, target, optimize, options);
+    const sdl = try createSDL(b, target, optimize, options);
 
     b.installArtifact(sdl);
 
@@ -1255,29 +1256,31 @@ pub fn build(b: *std.Build) !void {
 ///Finds all c/cpp sources in a folder recursively
 ///Each type of file is split into its own array so that caller can specify specific compilation flags for each filetype
 ///Caller owns returned memory (but that doesnt really matter in the build script, we just dont clear anything :^)
-fn find_c_cpp_sources(allocator: std.mem.Allocator, search_path: []const u8) !struct { c: []const []const u8, cpp: []const []const u8 } {
+fn findCSources(allocator: std.mem.Allocator, search_path: []const u8) !struct { c: []const []const u8, cpp: []const []const u8 } {
     var c_list = std.ArrayList([]const u8).init(allocator);
     var cpp_list = std.ArrayList([]const u8).init(allocator);
 
-    var dir = try std.fs.openIterableDirAbsolute(search_path, .{});
+    var dir = try std.fs.openDirAbsolute(search_path, .{
+        .iterate = true,
+    });
     defer dir.close();
 
-    var walker: std.fs.IterableDir.Walker = try dir.walk(allocator);
+    var walker: std.fs.Dir.Walker = try dir.walk(allocator);
     defer walker.deinit();
 
-    var itr_next: ?std.fs.IterableDir.Walker.WalkerEntry = try walker.next();
+    var itr_next: ?std.fs.Dir.Walker.WalkerEntry = try walker.next();
     while (itr_next != null) {
-        var next: std.fs.IterableDir.Walker.WalkerEntry = itr_next.?;
+        const next: std.fs.Dir.Walker.WalkerEntry = itr_next.?;
 
         //if the file is a c source file
         if (std.mem.endsWith(u8, next.path, ".c")) {
             var item = try allocator.alloc(u8, next.path.len + search_path.len);
 
             //copy the root first
-            std.mem.copy(u8, item, search_path);
+            @memcpy(item[0..search_path.len], search_path);
 
             //copy the filepath next
-            std.mem.copy(u8, item[search_path.len..], next.path);
+            @memcpy(item[search_path.len..], next.path);
 
             try c_list.append(item);
         }
@@ -1287,10 +1290,10 @@ fn find_c_cpp_sources(allocator: std.mem.Allocator, search_path: []const u8) !st
             var item = try allocator.alloc(u8, next.path.len + search_path.len);
 
             //copy the root first
-            std.mem.copy(u8, item, search_path);
+            @memcpy(item[0..search_path.len], search_path);
 
             //copy the filepath next
-            std.mem.copy(u8, item[search_path.len..], next.path);
+            @memcpy(item[search_path.len..], next.path);
 
             try cpp_list.append(item);
         }
