@@ -135,7 +135,10 @@ pub fn build(b: *std.Build) void {
         }
         lib.addCSourceFiles(.{ .files = files.toOwnedSlice() catch @panic("OOM") });
         lib.addConfigHeader(config_header);
-        lib.installConfigHeader(config_header);
+
+        // I don't know how to get installConfigHeader to add the SDL2 subdir
+        //lib.installConfigHeader(config_header);
+        lib.installHeader(config_header.getOutput(), "SDL2/SDL_config.h");
 
         const revision_header = b.addConfigHeader(.{
             .style = .{ .cmake = b.path("include/SDL_revision.h.cmake") },
