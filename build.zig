@@ -860,7 +860,7 @@ const linux_options = [_]SdlOption{
             "SDL_VIDEO_DRIVER_X11_SUPPORTS_GENERIC_EVENTS",
         },
         .src_files = &.{ },
-        .system_libs = &.{ "x11", "xext" },
+        .system_libs = &.{ "X11", "Xext" },
     },
     .{
         .name = "render_driver_ogl",
