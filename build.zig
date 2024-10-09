@@ -191,6 +191,7 @@ const generic_src_files = [_][]const u8{
 
     "src/joystick/SDL_gamecontroller.c",
     "src/joystick/SDL_joystick.c",
+    "src/joystick/SDL_steam_virtual_gamepad.c",
     "src/joystick/controller_type.c",
     "src/joystick/virtual/SDL_virtualjoystick.c",
 
@@ -254,7 +255,9 @@ const generic_src_files = [_][]const u8{
     "src/video/SDL_video.c",
     "src/video/SDL_vulkan_utils.c",
     "src/video/SDL_yuv.c",
-    "src/video/yuv2rgb/yuv_rgb.c",
+    "src/video/yuv2rgb/yuv_rgb_lsx.c",
+    "src/video/yuv2rgb/yuv_rgb_sse.c",
+    "src/video/yuv2rgb/yuv_rgb_std.c",
 
     "src/video/dummy/SDL_nullevents.c",
     "src/video/dummy/SDL_nullframebuffer.c",
@@ -272,6 +275,7 @@ const generic_src_files = [_][]const u8{
     "src/joystick/hidapi/SDL_hidapi_shield.c",
     "src/joystick/hidapi/SDL_hidapi_stadia.c",
     "src/joystick/hidapi/SDL_hidapi_steam.c",
+    "src/joystick/hidapi/SDL_hidapi_steamdeck.c",
     "src/joystick/hidapi/SDL_hidapi_switch.c",
     "src/joystick/hidapi/SDL_hidapi_wii.c",
     "src/joystick/hidapi/SDL_hidapi_xbox360.c",
@@ -613,11 +617,9 @@ const unknown_src_files = [_][]const u8{
     "src/thread/os2/SDL_systls.c",
     "src/thread/ps2/SDL_syssem.c",
     "src/thread/ps2/SDL_systhread.c",
-    "src/thread/psp/SDL_syscond.c",
     "src/thread/psp/SDL_sysmutex.c",
     "src/thread/psp/SDL_syssem.c",
     "src/thread/psp/SDL_systhread.c",
-    "src/thread/vita/SDL_syscond.c",
     "src/thread/vita/SDL_sysmutex.c",
     "src/thread/vita/SDL_syssem.c",
     "src/thread/vita/SDL_systhread.c",
