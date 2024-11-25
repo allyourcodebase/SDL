@@ -1,7 +1,7 @@
 .{
     .name = "SDL",
     .minimum_zig_version = "0.12.0",
-    .version = "2.26.3-6",
+    .version = "2.30.9",
     .dependencies = .{},
     .paths = .{
         "LICENSE.txt",
@@ -11,5 +11,6 @@
         "include",
         "include-pregen",
         "src",
+        "android-project",
     },
 }

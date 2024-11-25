@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2023 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2024 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -93,9 +93,7 @@ typedef unsigned int uintptr_t;
 #define HAVE_DXGI_H 1
 #define HAVE_XINPUT_H 1
 #if defined(_WIN32_MAXVER) && _WIN32_MAXVER >= 0x0A00  /* Windows 10 SDK */
-// This can be enabled when Zig updates to the next mingw-w64 release,
-// which will make the headers gain `windows.gaming.input.h`.
-//#define HAVE_WINDOWS_GAMING_INPUT_H 1
+#define HAVE_WINDOWS_GAMING_INPUT_H 1
 #endif
 #if defined(_WIN32_MAXVER) && _WIN32_MAXVER >= 0x0602  /* Windows 8 SDK */
 #define HAVE_D3D11_H 1
@@ -103,8 +101,10 @@ typedef unsigned int uintptr_t;
 #define HAVE_ROAPI_H 1
 #endif
 #endif
-#if defined(WDK_NTDDI_VERSION) && WDK_NTDDI_VERSION > 0x0A000008 /* 10.0.19041.0 */
+#if defined(__has_include)
+#if __has_include(<d3d12.h>) && __has_include(<d3d12sdklayers.h>)
 #define HAVE_D3D12_H 1
+#endif
 #endif
 #if defined(_WIN32_MAXVER) && _WIN32_MAXVER >= 0x0603  /* Windows 8.1 SDK */
 #define HAVE_SHELLSCALINGAPI_H 1

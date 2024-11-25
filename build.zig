@@ -5,13 +5,20 @@ pub fn build(b: *std.Build) void {
     const optimize = b.standardOptimizeOption(.{});
     const t = target.result;
 
-    const lib = b.addStaticLibrary(.{
+    const is_shared_library = t.isAndroid();
+    const lib = if (!is_shared_library) b.addStaticLibrary(.{
         .name = "SDL2",
         .target = target,
         .optimize = optimize,
+        .link_libc = true,
+    }) else b.addSharedLibrary(.{
+        .name = "SDL2",
+        .target = target,
+        .optimize = optimize,
+        .link_libc = true,
     });
 
-    lib.addIncludePath(b.path("include"));
+    const sdl_include_path = b.path("include");
     lib.addCSourceFiles(.{ .files = &generic_src_files });
     lib.defineCMacro("SDL_USE_BUILTIN_OPENGL_DEFINITIONS", "1");
     lib.linkLibC();
@@ -62,13 +69,51 @@ pub fn build(b: *std.Build) void {
             var dir = std.fs.openDirAbsolute(cache_include, std.fs.Dir.OpenDirOptions{ .access_sub_paths = true, .no_follow = true }) catch @panic("No emscripten cache. Generate it!");
             dir.close();
 
-            lib.addIncludePath(b.path(cache_include));
+            lib.addIncludePath(.{ .cwd_relative = cache_include });
         },
-        else => { },
+        else => {
+            if (t.isAndroid()) {
+                lib.root_module.addCSourceFiles(.{
+                    .files = &android_src_files,
+                });
+
+                // This is needed for "src/render/opengles/SDL_render_gles.c" to compile
+                lib.root_module.addCMacro("GL_GLEXT_PROTOTYPES", "1");
+
+                // Add Java files to dependency so that they can be copied downstream
+                const java_dir = b.path("android-project/app/src/main/java/org/libsdl/app");
+                const java_files: []const []const u8 = &.{
+                    "SDL.java",
+                    "SDLSurface.java",
+                    "SDLActivity.java",
+                    "SDLAudioManager.java",
+                    "SDLControllerManager.java",
+                    "HIDDevice.java",
+                    "HIDDeviceUSB.java",
+                    "HIDDeviceManager.java",
+                    "HIDDeviceBLESteamController.java",
+                };
+                const java_write_files = b.addNamedWriteFiles("sdljava");
+                for (java_files) |java_file_basename| {
+                    _ = java_write_files.addCopyFile(java_dir.path(b, java_file_basename), java_file_basename);
+                }
+
+                // https://github.com/libsdl-org/SDL/blob/release-2.30.6/Android.mk#L82C62-L82C69
+                lib.linkSystemLibrary("dl");
+                lib.linkSystemLibrary("GLESv1_CM");
+                lib.linkSystemLibrary("GLESv2");
+                lib.linkSystemLibrary("OpenSLES");
+                lib.linkSystemLibrary("log");
+                lib.linkSystemLibrary("android");
+            }
+        },
     }
+
+    lib.addIncludePath(sdl_include_path);
 
     const use_pregenerated_config = switch (t.os.tag) {
         .windows, .macos, .emscripten => true,
+        .linux => t.isAndroid(),
         else => false,
     };
 
@@ -115,13 +160,18 @@ pub fn build(b: *std.Build) void {
             .linux => {
                 files.appendSlice(&linux_src_files) catch @panic("OOM");
                 config_header.addValues(.{
+                    .HAVE_INOTIFY = 1,
+                    .HAVE_INOTIFY_INIT = 1,
+                    .HAVE_INOTIFY_INIT1 = 1,
                     .HAVE_LINUX_INPUT_H = 1,
+                    .SDL_FILESYSTEM_UNIX = 1,
+                    .SDL_HAPTIC_LINUX = 1,
+                    .SDL_INPUT_LINUXEV = 1,
+                    .SDL_JOYSTICK_LINUX = 1,
+                    .SDL_LOADSO_DLOPEN = 1,
                     .SDL_THREAD_PTHREAD = 1,
                     .SDL_THREAD_PTHREAD_RECURSIVE_MUTEX = 1,
                     .SDL_TIMER_UNIX = 1,
-                    .SDL_HAPTIC_LINUX = 1,
-                    .SDL_FILESYSTEM_UNIX = 1,
-                    .SDL_LOADSO_DLOPEN = 1,
                     .SDL_VIDEO_OPENGL = 1,
                     .SDL_VIDEO_OPENGL_ES = 1,
                     .SDL_VIDEO_OPENGL_ES2 = 1,
@@ -144,10 +194,37 @@ pub fn build(b: *std.Build) void {
         const revision_header = b.addConfigHeader(.{
             .style = .{ .cmake = b.path("include/SDL_revision.h.cmake") },
             .include_path = "SDL_revision.h",
-        }, .{ });
+        }, .{
+            .SDL_VENDOR_INFO = "allyourcodebase.com",
+        });
         lib.addConfigHeader(revision_header);
-        lib.installConfigHeader(revision_header);
+        lib.installHeader(revision_header.getOutput(), "SDL2/SDL_revision.h");
     }
+
+    const use_hidapi = b.option(bool, "use_hidapi", "Use hidapi shared library") orelse t.isAndroid();
+
+    if (use_hidapi) {
+        const hidapi_lib = b.addSharedLibrary(.{
+            .name = "hidapi",
+            .target = target,
+            .optimize = optimize,
+            .link_libc = true,
+        });
+        hidapi_lib.addIncludePath(sdl_include_path);
+        hidapi_lib.addIncludePath(b.path("include-pregen"));
+        hidapi_lib.root_module.addCSourceFiles(.{
+            .root = b.path(""),
+            .files = &[_][]const u8{
+                "src/hidapi/android/hid.cpp",
+            },
+            .flags = &.{"-std=c++11"},
+        });
+        hidapi_lib.linkSystemLibrary("log");
+        hidapi_lib.linkLibCpp();
+        lib.linkLibrary(hidapi_lib);
+        b.installArtifact(hidapi_lib);
+    }
+
     lib.installHeadersDirectory(b.path("include"), "SDL2", .{});
     b.installArtifact(lib);
 }
@@ -191,6 +268,7 @@ const generic_src_files = [_][]const u8{
 
     "src/joystick/SDL_gamecontroller.c",
     "src/joystick/SDL_joystick.c",
+    "src/joystick/SDL_steam_virtual_gamepad.c",
     "src/joystick/controller_type.c",
     "src/joystick/virtual/SDL_virtualjoystick.c",
 
@@ -254,7 +332,9 @@ const generic_src_files = [_][]const u8{
     "src/video/SDL_video.c",
     "src/video/SDL_vulkan_utils.c",
     "src/video/SDL_yuv.c",
-    "src/video/yuv2rgb/yuv_rgb.c",
+    "src/video/yuv2rgb/yuv_rgb_lsx.c",
+    "src/video/yuv2rgb/yuv_rgb_sse.c",
+    "src/video/yuv2rgb/yuv_rgb_std.c",
 
     "src/video/dummy/SDL_nullevents.c",
     "src/video/dummy/SDL_nullframebuffer.c",
@@ -272,12 +352,52 @@ const generic_src_files = [_][]const u8{
     "src/joystick/hidapi/SDL_hidapi_shield.c",
     "src/joystick/hidapi/SDL_hidapi_stadia.c",
     "src/joystick/hidapi/SDL_hidapi_steam.c",
+    "src/joystick/hidapi/SDL_hidapi_steamdeck.c",
     "src/joystick/hidapi/SDL_hidapi_switch.c",
     "src/joystick/hidapi/SDL_hidapi_wii.c",
     "src/joystick/hidapi/SDL_hidapi_xbox360.c",
     "src/joystick/hidapi/SDL_hidapi_xbox360w.c",
     "src/joystick/hidapi/SDL_hidapi_xboxone.c",
     "src/joystick/hidapi/SDL_hidapijoystick.c",
+};
+
+const android_src_files = [_][]const u8{
+    "src/core/android/SDL_android.c",
+
+    "src/audio/android/SDL_androidaudio.c",
+    "src/audio/openslES/SDL_openslES.c",
+    "src/audio/aaudio/SDL_aaudio.c",
+
+    "src/haptic/android/SDL_syshaptic.c",
+    "src/joystick/android/SDL_sysjoystick.c",
+    "src/locale/android/SDL_syslocale.c",
+    "src/misc/android/SDL_sysurl.c",
+    "src/power/android/SDL_syspower.c",
+    "src/filesystem/android/SDL_sysfilesystem.c",
+    "src/sensor/android/SDL_androidsensor.c",
+
+    "src/timer/unix/SDL_systimer.c",
+    "src/loadso/dlopen/SDL_sysloadso.c",
+
+    "src/thread/pthread/SDL_syscond.c",
+    "src/thread/pthread/SDL_sysmutex.c",
+    "src/thread/pthread/SDL_syssem.c",
+    "src/thread/pthread/SDL_systhread.c",
+    "src/thread/pthread/SDL_systls.c",
+    "src/render/opengles/SDL_render_gles.c",
+    "src/render/opengles2/SDL_render_gles2.c",
+    "src/render/opengles2/SDL_shaders_gles2.c",
+
+    "src/video/android/SDL_androidclipboard.c",
+    "src/video/android/SDL_androidevents.c",
+    "src/video/android/SDL_androidgl.c",
+    "src/video/android/SDL_androidkeyboard.c",
+    "src/video/android/SDL_androidmessagebox.c",
+    "src/video/android/SDL_androidmouse.c",
+    "src/video/android/SDL_androidtouch.c",
+    "src/video/android/SDL_androidvideo.c",
+    "src/video/android/SDL_androidvulkan.c",
+    "src/video/android/SDL_androidwindow.c",
 };
 
 const windows_src_files = [_][]const u8{
@@ -292,10 +412,7 @@ const windows_src_files = [_][]const u8{
     "src/hidapi/windows/hid.c",
     "src/joystick/windows/SDL_dinputjoystick.c",
     "src/joystick/windows/SDL_rawinputjoystick.c",
-    // This can be enabled when Zig updates to the next mingw-w64 release,
-    // which will make the headers gain `windows.gaming.input.h`.
-    // Also revert the patch 2c79fd8fd04f1e5045cbe5978943b0aea7593110.
-    //"src/joystick/windows/SDL_windows_gaming_input.c",
+    "src/joystick/windows/SDL_windows_gaming_input.c",
     "src/joystick/windows/SDL_windowsjoystick.c",
     "src/joystick/windows/SDL_xinputjoystick.c",
 
@@ -348,6 +465,9 @@ const windows_src_files = [_][]const u8{
 };
 
 const linux_src_files = [_][]const u8{
+    "src/core/linux/SDL_evdev.c",
+    "src/core/linux/SDL_evdev_capabilities.c",
+    "src/core/linux/SDL_evdev_kbd.c",
     "src/core/linux/SDL_threadprio.c",
     "src/core/unix/SDL_poll.c",
 
@@ -357,7 +477,7 @@ const linux_src_files = [_][]const u8{
 
     "src/loadso/dlopen/SDL_sysloadso.c",
     "src/joystick/linux/SDL_sysjoystick.c",
-    "src/joystick/dummy/SDL_sysjoystick.c",
+    "src/joystick/steam/SDL_steamcontroller.c",
 
     "src/misc/unix/SDL_sysurl.c",
 
@@ -520,7 +640,6 @@ const unknown_src_files = [_][]const u8{
     "src/core/os2/geniconv/os2iconv.c",
     "src/core/os2/geniconv/sys2utf8.c",
     "src/core/os2/geniconv/test.c",
-    "src/core/unix/SDL_poll.c",
 
     "src/file/n3ds/SDL_rwopsromfs.c",
 
@@ -548,7 +667,6 @@ const unknown_src_files = [_][]const u8{
     "src/joystick/os2/SDL_os2joystick.c",
     "src/joystick/ps2/SDL_sysjoystick.c",
     "src/joystick/psp/SDL_sysjoystick.c",
-    "src/joystick/steam/SDL_steamcontroller.c",
     "src/joystick/vita/SDL_sysjoystick.c",
 
     "src/loadso/dummy/SDL_sysloadso.c",
@@ -613,11 +731,9 @@ const unknown_src_files = [_][]const u8{
     "src/thread/os2/SDL_systls.c",
     "src/thread/ps2/SDL_syssem.c",
     "src/thread/ps2/SDL_systhread.c",
-    "src/thread/psp/SDL_syscond.c",
     "src/thread/psp/SDL_sysmutex.c",
     "src/thread/psp/SDL_syssem.c",
     "src/thread/psp/SDL_systhread.c",
-    "src/thread/vita/SDL_syscond.c",
     "src/thread/vita/SDL_sysmutex.c",
     "src/thread/vita/SDL_syssem.c",
     "src/thread/vita/SDL_systhread.c",
@@ -827,7 +943,7 @@ const SdlOption = struct {
     // C Macros are similar to SDL configs but aren't present in the public
     // headers and only affect the SDL implementation.  None of the values
     // should occur in the include directory.
-    c_macros: []const []const u8 = &.{ },
+    c_macros: []const []const u8 = &.{},
     src_files: []const []const u8,
     system_libs: []const []const u8,
 };
@@ -835,8 +951,8 @@ const render_driver_sw = SdlOption{
     .name = "render_driver_software",
     .desc = "enable the software render driver",
     .default = true,
-    .sdl_configs = &.{ },
-    .c_macros = &.{ "SDL_VIDEO_RENDER_SW" },
+    .sdl_configs = &.{},
+    .c_macros = &.{"SDL_VIDEO_RENDER_SW"},
     .src_files = &.{
         "src/render/software/SDL_blendfillrect.c",
         "src/render/software/SDL_blendline.c",
@@ -847,7 +963,7 @@ const render_driver_sw = SdlOption{
         "src/render/software/SDL_rotate.c",
         "src/render/software/SDL_triangle.c",
     },
-    .system_libs = &.{ },
+    .system_libs = &.{},
 };
 const linux_options = [_]SdlOption{
     render_driver_sw,
@@ -859,56 +975,56 @@ const linux_options = [_]SdlOption{
             "SDL_VIDEO_DRIVER_X11",
             "SDL_VIDEO_DRIVER_X11_SUPPORTS_GENERIC_EVENTS",
         },
-        .src_files = &.{ },
+        .src_files = &.{},
         .system_libs = &.{ "X11", "Xext" },
     },
     .{
         .name = "render_driver_ogl",
         .desc = "enable the opengl render driver",
         .default = true,
-        .sdl_configs = &.{ "SDL_VIDEO_RENDER_OGL" },
+        .sdl_configs = &.{"SDL_VIDEO_RENDER_OGL"},
         .src_files = &.{
             "src/render/opengl/SDL_render_gl.c",
             "src/render/opengl/SDL_shaders_gl.c",
         },
-        .system_libs = &.{ },
+        .system_libs = &.{},
     },
     .{
         .name = "render_driver_ogl_es",
         .desc = "enable the opengl es render driver",
         .default = true,
-        .sdl_configs = &.{ "SDL_VIDEO_RENDER_OGL_ES" },
+        .sdl_configs = &.{"SDL_VIDEO_RENDER_OGL_ES"},
         .src_files = &.{
             "src/render/opengles/SDL_render_gles.c",
         },
-        .system_libs = &.{ },
+        .system_libs = &.{},
     },
     .{
         .name = "render_driver_ogl_es2",
         .desc = "enable the opengl es2 render driver",
         .default = true,
-        .sdl_configs = &.{ "SDL_VIDEO_RENDER_OGL_ES2" },
+        .sdl_configs = &.{"SDL_VIDEO_RENDER_OGL_ES2"},
         .src_files = &.{
             "src/render/opengles2/SDL_render_gles2.c",
             "src/render/opengles2/SDL_shaders_gles2.c",
         },
-        .system_libs = &.{ },
+        .system_libs = &.{},
     },
     .{
         .name = "audio_driver_pulse",
         .desc = "enable the pulse audio driver",
         .default = true,
-        .sdl_configs = &.{ "SDL_AUDIO_DRIVER_PULSEAUDIO" },
-        .src_files = &.{ "src/audio/pulseaudio/SDL_pulseaudio.c" },
-        .system_libs = &.{ "pulse" },
+        .sdl_configs = &.{"SDL_AUDIO_DRIVER_PULSEAUDIO"},
+        .src_files = &.{"src/audio/pulseaudio/SDL_pulseaudio.c"},
+        .system_libs = &.{"pulse"},
     },
     .{
         .name = "audio_driver_alsa",
         .desc = "enable the alsa audio driver",
         .default = false,
-        .sdl_configs = &.{ "SDL_AUDIO_DRIVER_ALSA" },
-        .src_files = &.{ "src/audio/alsa/SDL_alsa_audio.c" },
-        .system_libs = &.{ "alsa" },
+        .sdl_configs = &.{"SDL_AUDIO_DRIVER_ALSA"},
+        .src_files = &.{"src/audio/alsa/SDL_alsa_audio.c"},
+        .system_libs = &.{"alsa"},
     },
 };
 
