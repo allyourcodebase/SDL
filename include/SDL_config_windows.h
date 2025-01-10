@@ -93,7 +93,9 @@ typedef unsigned int uintptr_t;
 #define HAVE_DXGI_H 1
 #define HAVE_XINPUT_H 1
 #if defined(_WIN32_MAXVER) && _WIN32_MAXVER >= 0x0A00  /* Windows 10 SDK */
+#if !defined(__MINGW32__) /* in zig version 0.14.0-dev.2628+5b5c60f43, this header isn't found by default (I haven't looked further into it) */
 #define HAVE_WINDOWS_GAMING_INPUT_H 1
+#endif
 #endif
 #if defined(_WIN32_MAXVER) && _WIN32_MAXVER >= 0x0602  /* Windows 8 SDK */
 #define HAVE_D3D11_H 1
