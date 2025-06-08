@@ -1016,6 +1016,7 @@ fn applyOptions(
 fn configHeader(b: *std.Build, t: std.Target) *std.Build.Step.ConfigHeader {
     const is_linux = t.os.tag == .linux;
     const is_unix = t.os.tag != .windows;
+    const is_musl = t.isMuslLibC();
 
     return b.addConfigHeader(.{
         .style = .{ .cmake = b.path("include/SDL_config.h.cmake") },
@@ -1081,8 +1082,8 @@ fn configHeader(b: *std.Build, t: std.Target) *std.Build.Step.ConfigHeader {
         .HAVE_MEMMOVE = 1,
         .HAVE_MEMCMP = 1,
         .HAVE_WCSLEN = 1,
-        .HAVE_WCSLCPY = 1,
-        .HAVE_WCSLCAT = 1,
+        .HAVE_WCSLCPY = !is_musl,
+        .HAVE_WCSLCAT = !is_musl,
         .HAVE__WCSDUP = 0,
         .HAVE_WCSDUP = 1,
         .HAVE_WCSSTR = 1,
