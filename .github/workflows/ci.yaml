@@ -14,7 +14,6 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        zig-version: [0.14.0, latest]
         os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
@@ -29,8 +28,6 @@ jobs:
 
       - name: Setup Zig
         uses: mlugg/setup-zig@v2
-        with:
-          version: ${{ matrix.zig-version }}
 
       - name: Check Formatting
         run: zig fmt --ast-check --check .
