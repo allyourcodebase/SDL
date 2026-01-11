@@ -68,12 +68,12 @@ pub fn build(b: *std.Build) void {
             defer b.allocator.free(cache_include);
 
             // TODO: Remove compatibility shim when Zig 0.16.0 is the minimum required version.
-            const open_dir_opts: std.fs.Dir.OpenOptions = if (@hasField(std.fs.Dir.OpenOptions, "follow_symlinks"))
+            const open_dir_opts: std.Io.Dir.OpenOptions = if (@hasField(std.Io.Dir.OpenOptions, "follow_symlinks"))
                 .{ .access_sub_paths = true, .follow_symlinks = false }
             else
                 .{ .access_sub_paths = true, .no_follow = true };
-            var dir = std.fs.openDirAbsolute(cache_include, open_dir_opts) catch @panic("No emscripten cache. Generate it!");
-            dir.close();
+            var dir = std.Io.Dir.openDirAbsolute(mod.owner.graph.io, cache_include, open_dir_opts) catch @panic("No emscripten cache. Generate it!");
+            dir.close(mod.owner.graph.io);
 
             mod.addIncludePath(.{ .cwd_relative = cache_include });
         },
