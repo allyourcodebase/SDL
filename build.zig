@@ -79,11 +79,10 @@ pub fn build(b: *std.Build) void {
                 dir.close(mod.owner.graph.io);
             } else if (@hasDecl(std.fs, "Dir")) {
                 // <=0.15.2 -> Dir on std.fs
-                // TODO: Remove compatibility shim when Zig 0.16.0 is the minimum required version.
-                const open_dir_opts: std.fs.Dir.OpenOptions = if (@hasField(std.fs.Dir.OpenOptions, "follow_symlinks"))
-                    .{ .access_sub_paths = true, .follow_symlinks = false }
-                else
-                    .{ .access_sub_paths = true, .no_follow = true };
+                const open_dir_opts: std.fs.Dir.OpenOptions = .{
+                    .access_sub_paths = true,
+                    .follow_symlinks = false,
+                };
 
                 var dir = std.fs.openDirAbsolute(cache_include, open_dir_opts) catch @panic("No emscripten cache. Generate it!");
 
