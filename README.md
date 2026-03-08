@@ -1,8 +1,11 @@
-# SDL for Zig
+# SDL2 for Zig
 
-This is a fork of [SDL](https://www.libsdl.org/), packaged for [Zig](https://ziglang.org).
+This is a fork of [SDL2](https://www.libsdl.org/), packaged for [Zig](https://ziglang.org).
 Unnecessary files have been deleted, and the build system has been replaced with `build.zig`.
-The package provides version 2 of SDL. For version 3, consider https://github.com/castholm/SDL.
+
+For SDL3, consider:
+* https://github.com/allyourcodebase/SDL3
+* https://github.com/castholm/SDL
 
 ## Getting started
 
