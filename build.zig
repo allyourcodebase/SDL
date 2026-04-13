@@ -1016,7 +1016,7 @@ fn applyOptions(
             mod.addCMacro(name, if (enabled) "1" else "0");
         }
         for (option.sdl_configs) |config| {
-            config_header.values.put(config, .{ .int = if (enabled) 1 else 0 }) catch @panic("OOM");
+            config_header.addValue(config, u1, @intFromBool(enabled));
         }
         if (enabled) {
             mod.addCSourceFiles(.{ .files = option.src_files });
