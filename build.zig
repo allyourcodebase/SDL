@@ -116,6 +116,14 @@ pub fn build(b: *std.Build) !void {
     // Add the Wayland scanner step
     linux.addWaylandScannerStep(b);
 
+    // Translate the C header for the example
+    const sdl3_h = b.addTranslateC(.{
+        .root_source_file = b.path("src/sdl3.h"),
+        .target = target,
+        .optimize = optimize,
+    });
+    sdl3_h.addSystemIncludePath(lib.getEmittedIncludeTree());
+
     // Add the example
     const example = b.addExecutable(.{
         .name = "example",
@@ -126,6 +134,7 @@ pub fn build(b: *std.Build) !void {
         }),
     });
     example.root_module.linkLibrary(lib);
+    example.root_module.addImport("sdl3_h", sdl3_h.createModule());
 
     const build_example_step = b.step("example", "Build the example app");
     build_example_step.dependOn(&example.step);
