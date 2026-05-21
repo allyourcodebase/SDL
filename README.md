@@ -19,38 +19,23 @@ You can add SDL3 to your project like this by updating `build.zig.zon` from the 
 zig fetch --save <url-of-this-repo>
 ```
 
-You'll then want to create a C header file, say `src/sdl3.h` like:
-```c
-#include <SDL3/SDL.h>
-```
-
-Next you can add the following to your `build.zig` file:
+And then you can add it to your `build.zig` like this:
 ```zig
 const sdl = b.dependency("sdl", .{
     .optimize = optimize,
     .target = target,
 });
-const sdl3_lib = sdl.artifact("SDL3");
-
-const sdl3_h = b.addTranslateC(.{
-    .root_source_file = b.path("src/sdl3.h"),
-    .target = target,
-    .optimize = optimize,
-});
-sdl3_h.addSystemIncludePath(sdl3_lib.getEmittedIncludeTree());
-
-exe.root_module.linkLibrary(sdl3_lib);
-exe.root_module.addImport("sdl3_h", sdl3_h.createModule());
+exe.root_module.addImport("sdl3", sdl.module("sdl3"));
 ```
 
 Finally, you can use SDL's C API from Zig like this:
 ```zig
 const std = @import("std");
-const c = @import("sdl3_h");
-if (!c.SDL_Init(c.SDL_INIT_VIDEO)) {
-    std.debug.panic("SDL_Init failed: {s}\n", .{c.SDL_GetError()});
+const sdl = @import("sdl3");
+if (!sdl.SDL_Init(sdl.SDL_INIT_VIDEO)) {
+    std.debug.panic("SDL_Init failed: {s}\n", .{sdl.SDL_GetError()});
 }
-defer c.SDL_Quit();
+defer sdl.SDL_Quit();
 ```
 
 ## Example

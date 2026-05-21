@@ -34,7 +34,7 @@ pub fn build(b: *std.Build) !void {
         ,
     ) orelse .static;
 
-    // Get the so version. This is the same as the SDL version, but the major version is elided
+    // Get the SO version. This is the same as the SDL version, but the major version is elided
     // since it's baked into the name. This mirrors the official build process.
     var sdl_so_version = comptime std.SemanticVersion.parse(build_zon.dependencies.sdl.version) catch unreachable;
     assert(sdl_so_version.major == 3);
@@ -116,13 +116,15 @@ pub fn build(b: *std.Build) !void {
     // Add the Wayland scanner step
     linux.addWaylandScannerStep(b);
 
-    // Translate the C header for the example
-    const sdl3_h = b.addTranslateC(.{
-        .root_source_file = b.path("src/sdl3.h"),
+    // Translate the SDL headers and export them as a Zig module
+    const translate_c = b.addTranslateC(.{
+        .root_source_file = upstream.path("include/SDL3/SDL.h"),
         .target = target,
         .optimize = optimize,
     });
-    sdl3_h.addSystemIncludePath(lib.getEmittedIncludeTree());
+    translate_c.addIncludePath(upstream.path("include"));
+    const module = translate_c.addModule("sdl3");
+    module.linkLibrary(lib);
 
     // Add the example
     const example = b.addExecutable(.{
@@ -133,8 +135,7 @@ pub fn build(b: *std.Build) !void {
             .optimize = optimize,
         }),
     });
-    example.root_module.linkLibrary(lib);
-    example.root_module.addImport("sdl3_h", sdl3_h.createModule());
+    example.root_module.addImport("sdl3", module);
 
     const build_example_step = b.step("example", "Build the example app");
     build_example_step.dependOn(&example.step);
