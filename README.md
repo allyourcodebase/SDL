@@ -25,19 +25,17 @@ const sdl = b.dependency("sdl", .{
     .optimize = optimize,
     .target = target,
 });
-exe.root_module.linkLibrary(sdl.artifact("SDL3"));
+exe.root_module.addImport("sdl3", sdl.module("sdl3"));
 ```
 
 Finally, you can use SDL's C API from Zig like this:
 ```zig
 const std = @import("std");
-const c = @cImport({
-    @cInclude("SDL3/SDL.h");
-});
-if (!c.SDL_Init(c.SDL_INIT_VIDEO)) {
-    std.debug.panic("SDL_Init failed: {s}\n", .{c.SDL_GetError()});
+const sdl = @import("sdl3");
+if (!sdl.SDL_Init(sdl.SDL_INIT_VIDEO)) {
+    std.debug.panic("SDL_Init failed: {s}\n", .{sdl.SDL_GetError()});
 }
-defer c.SDL_Quit();
+defer sdl.SDL_Quit();
 ```
 
 ## Example
@@ -122,6 +120,7 @@ When making a PR that adds support for a new target:
 * Modify `build.zig.zon` to point to the desired SDL version
 * If you get linker errors or missing headers relating to Wayland protocols on Linux, new Wayland protocols were added upstream. You can fix this by running `zig build wayland-scanner` with `wayland-scanner`.
 * If you get any other linker errors or missing files, sources were added or renamed upstream, and you need to update `src/sdl.zon`.
+* Check if any headers need to be added to to `src/sdl.h`, or alternatively, if the intentional absence of any headers from this file needs to be documented.
 
 ## SDL's Dependencies
 
