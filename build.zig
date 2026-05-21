@@ -69,6 +69,7 @@ pub fn build(b: *std.Build) !void {
     // Set the include path
     lib.root_module.addIncludePath(upstream.path("include"));
     lib.root_module.addIncludePath(upstream.path("src"));
+    lib.root_module.addIncludePath(upstream.path("src/video/khronos"));
 
     // Compile the generic sources
     lib.root_module.addCSourceFiles(.{
@@ -118,11 +119,12 @@ pub fn build(b: *std.Build) !void {
 
     // Translate the SDL headers and export them as a Zig module
     const translate_c = b.addTranslateC(.{
-        .root_source_file = upstream.path("include/SDL3/SDL.h"),
+        .root_source_file = b.path("src/sdl.h"),
         .target = target,
         .optimize = optimize,
     });
     translate_c.addIncludePath(upstream.path("include"));
+    translate_c.addIncludePath(upstream.path("src/video/khronos"));
     const module = translate_c.addModule("sdl3");
     module.linkLibrary(lib);
 
