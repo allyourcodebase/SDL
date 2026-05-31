@@ -11,6 +11,7 @@ pub const sources = @import("src/sdl.zon");
 pub const flags = &.{
     "-fno-strict-aliasing",
     "-fvisibility=hidden",
+    "-DUSING_GENERATED_CONFIG_H",
 };
 
 pub fn build(b: *std.Build) !void {
@@ -83,9 +84,6 @@ pub fn build(b: *std.Build) !void {
             .style = .{ .cmake = upstream.path("include/build_config/SDL_build_config.h.cmake") },
             .include_path = "SDL_build_config.h",
         }, .{
-            // Don't allow including the default config
-            .USING_GENERATED_CONFIG_H = true,
-
             // Generic audio drivers
             .SDL_AUDIO_DRIVER_DUMMY = true,
             .SDL_AUDIO_DRIVER_DISK = true,
@@ -123,6 +121,7 @@ pub fn build(b: *std.Build) !void {
         .target = target,
         .optimize = optimize,
     });
+    translate_c.defineCMacro("USING_GENERATED_CONFIG_H", "1");
     translate_c.addIncludePath(upstream.path("include"));
     translate_c.addIncludePath(upstream.path("src/video/khronos"));
     const module = translate_c.addModule("sdl3");
