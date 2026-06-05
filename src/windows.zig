@@ -55,14 +55,9 @@ pub fn build(
         .HAVE_XINPUT_H = 1,
         .HAVE_DXGI1_5_H = 1,
         .HAVE_DXGI1_6_H = 1,
-        .HAVE_D3D11_H = 1,
-        .HAVE_ROAPI_H = 1,
-        .HAVE_SHELLSCALINGAPI_H = 1,
 
         .HAVE_MMDEVICEAPI_H = 1,
-        .HAVE_AUDIOCLIENT_H = 1,
         .HAVE_TPCSHRD_H = 1,
-        .HAVE_SENSORSAPI_H = 1,
 
         .HAVE_LIBC = 1,
 
