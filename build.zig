@@ -127,6 +127,7 @@ pub fn build(b: *std.Build) !void {
     translator.addIncludePath(upstream.path("include"));
     translator.addIncludePath(upstream.path("src/video/khronos"));
     translator.mod.linkLibrary(lib);
+    try b.modules.putNoClobber(b.graph.arena, "sdl3", translator.mod);
 
     // Add the example
     const example = b.addExecutable(.{
