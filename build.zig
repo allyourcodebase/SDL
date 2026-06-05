@@ -3,6 +3,7 @@ const linux = @import("src/linux.zig");
 const windows = @import("src/windows.zig");
 const macos = @import("src/macos.zig");
 const build_zon = @import("build.zig.zon");
+const Translator = @import("translate_c").Translator;
 
 const assert = std.debug.assert;
 
@@ -116,16 +117,16 @@ pub fn build(b: *std.Build) !void {
     linux.addWaylandScannerStep(b);
 
     // Translate the SDL headers and export them as a Zig module
-    const translate_c = b.addTranslateC(.{
-        .root_source_file = b.path("src/sdl.h"),
+    const translate_c = b.dependency("translate_c", .{});
+    const translator: Translator = .init(translate_c, .{
+        .c_source_file = b.path("src/sdl.h"),
         .target = target,
         .optimize = optimize,
     });
-    translate_c.defineCMacro("USING_GENERATED_CONFIG_H", "1");
-    translate_c.addIncludePath(upstream.path("include"));
-    translate_c.addIncludePath(upstream.path("src/video/khronos"));
-    const module = translate_c.addModule("sdl3");
-    module.linkLibrary(lib);
+    translator.defineCMacro("USING_GENERATED_CONFIG_H", "1");
+    translator.addIncludePath(upstream.path("include"));
+    translator.addIncludePath(upstream.path("src/video/khronos"));
+    translator.mod.linkLibrary(lib);
 
     // Add the example
     const example = b.addExecutable(.{
@@ -136,7 +137,7 @@ pub fn build(b: *std.Build) !void {
             .optimize = optimize,
         }),
     });
-    example.root_module.addImport("sdl3", module);
+    example.root_module.addImport("sdl3", translator.mod);
 
     const build_example_step = b.step("example", "Build the example app");
     build_example_step.dependOn(&example.step);
