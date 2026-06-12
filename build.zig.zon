@@ -49,8 +49,8 @@
             .hash = "N-V-__8AADqspgFDvy12L2K2kbcOVJukO_srdGXLV_ppgnuC",
         },
         .usb = .{
-            .url = "https://github.com/libusb/libusb/archive/a61afe5f75d969c4561a1d0ad753aa23cee6329a.tar.gz",
-            .hash = "N-V-__8AAF75GgCMh7ghqwWLiqe8NJszRIU8EWOIkQzyv7dc",
+            .url = "https://github.com/libusb/libusb/archive/a61afe5f75d969c4561a1d0ad753aa23cee6329a.zip",
+            .hash = "N-V-__8AAGT5GgAxQXXIen0EleLF0xfjZZMkR7soefwO0s7E",
         },
         .xcursor = .{
             .version = "1.2.3",
