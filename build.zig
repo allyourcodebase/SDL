@@ -60,11 +60,13 @@ pub fn build(b: *std.Build) void {
             mod.addCMacro("__EMSCRIPTEN_PTHREADS__ ", "1");
             mod.addCMacro("USE_SDL", "2");
             mod.addCSourceFiles(.{ .files = &emscripten_src_files });
-            if (b.sysroot == null) {
-                @panic("Pass '--sysroot \"$EMSDK/upstream/emscripten\"'");
-            }
 
-            const cache_include = std.fs.path.join(b.allocator, &.{ b.sysroot.?, "cache", "sysroot", "include" }) catch @panic("Out of memory");
+            const sysroot = if (@hasField(std.Build, "sysroot"))
+                b.sysroot orelse @panic("Pass '--sysroot \"$EMSDK/upstream/emscripten\"'")
+            else
+                @panic("`sysroot` was removed from the build system in newer versions of Zig"); // Help wanted
+
+            const cache_include = std.fs.path.join(b.allocator, &.{ sysroot, "cache", "sysroot", "include" }) catch @panic("Out of memory");
             defer b.allocator.free(cache_include);
 
             // TODO: Remove compatibility shim when minimum Zig version is 0.16.0.
