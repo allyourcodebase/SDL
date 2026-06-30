@@ -36,12 +36,6 @@ pub fn build(b: *std.Build) !void {
         ,
     ) orelse .static;
 
-    // Get the SO version. This is the same as the SDL version, but the major version is elided
-    // since it's baked into the name. This mirrors the official build process.
-    var sdl_so_version = comptime std.SemanticVersion.parse(build_zon.dependencies.sdl.version) catch unreachable;
-    assert(sdl_so_version.major == 3);
-    sdl_so_version.major = 0;
-
     // Create the library
     const lib = b.addLibrary(.{
         .name = "SDL3",
@@ -51,7 +45,8 @@ pub fn build(b: *std.Build) !void {
             .link_libc = true,
         }),
         .linkage = linkage,
-        .version = sdl_so_version,
+        .version = comptime std.SemanticVersion.parse(build_zon.dependencies.sdl.so_version)
+            catch unreachable,
     });
     switch (linkage) {
         .dynamic => {
