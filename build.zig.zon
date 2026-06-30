@@ -5,9 +5,10 @@
     .minimum_zig_version = "0.17.0",
     .dependencies = .{
         .sdl = .{
-            .url = "https://github.com/libsdl-org/SDL/archive/refs/tags/release-3.4.4.tar.gz",
-            .hash = "N-V-__8AAL9L9AJxY67Fhxp52_VHlLps195MF3irmi4z8Qge",
-            .version = "3.4.4",
+            // See https://github.com/libsdl-org/SDL/pull/15904
+            .url = "git+https://github.com/MasonRemaley/SDL#release-3.4.4-fix-surface-sort-callback",
+            .hash = "N-V-__8AAMJL9AK6KoamlTcuU5MiPD_-JW3Mz0jPAMzXE0w7",
+            .version = "3.4.4-fix-surface-sort-callback",
         },
         .translate_c = .{
             .url = "git+https://codeberg.org/ziglang/translate-c#1b33d1d273f7035a16c45457efdf2afda7cf0925",
