@@ -376,6 +376,7 @@
         "video/vivante/SDL_vivantevideo.c",
         "video/vivante/SDL_vivantevulkan.c",
         "video/wayland/SDL_waylandclipboard.c",
+        "video/wayland/SDL_waylandutil.c",
         "video/wayland/SDL_waylandcolor.c",
         "video/wayland/SDL_waylanddatamanager.c",
         "video/wayland/SDL_waylanddyn.c",

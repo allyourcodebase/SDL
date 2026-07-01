@@ -3,6 +3,7 @@ const linux = @import("src/linux.zig");
 const windows = @import("src/windows.zig");
 const macos = @import("src/macos.zig");
 const build_zon = @import("build.zig.zon");
+const Translator = @import("translate_c").Translator;
 
 const assert = std.debug.assert;
 
@@ -35,12 +36,6 @@ pub fn build(b: *std.Build) !void {
         ,
     ) orelse .static;
 
-    // Get the SO version. This is the same as the SDL version, but the major version is elided
-    // since it's baked into the name. This mirrors the official build process.
-    var sdl_so_version = comptime std.SemanticVersion.parse(build_zon.dependencies.sdl.version) catch unreachable;
-    assert(sdl_so_version.major == 3);
-    sdl_so_version.major = 0;
-
     // Create the library
     const lib = b.addLibrary(.{
         .name = "SDL3",
@@ -50,7 +45,8 @@ pub fn build(b: *std.Build) !void {
             .link_libc = true,
         }),
         .linkage = linkage,
-        .version = sdl_so_version,
+        .version = comptime std.SemanticVersion.parse(build_zon.dependencies.sdl.so_version)
+            catch unreachable,
     });
     switch (linkage) {
         .dynamic => {
@@ -116,16 +112,24 @@ pub fn build(b: *std.Build) !void {
     linux.addWaylandScannerStep(b);
 
     // Translate the SDL headers and export them as a Zig module
-    const translate_c = b.addTranslateC(.{
-        .root_source_file = b.path("src/sdl.h"),
+    const translate_c = b.dependency("translate_c", .{});
+    const translator: Translator = .init(translate_c, .{
+        .c_source_file = b.path("src/sdl.h"),
         .target = target,
-        .optimize = optimize,
+        // https://codeberg.org/ziglang/translate-c/issues/327
+        .optimize = switch (target.result.os.tag) {
+            .windows => switch (optimize) {
+                .ReleaseSafe => .ReleaseFast,
+                else => optimize,
+            },
+            else => optimize,
+        },
     });
-    translate_c.defineCMacro("USING_GENERATED_CONFIG_H", "1");
-    translate_c.addIncludePath(upstream.path("include"));
-    translate_c.addIncludePath(upstream.path("src/video/khronos"));
-    const module = translate_c.addModule("sdl3");
-    module.linkLibrary(lib);
+    translator.defineCMacro("USING_GENERATED_CONFIG_H", "1");
+    translator.addIncludePath(upstream.path("include"));
+    translator.addIncludePath(upstream.path("src/video/khronos"));
+    translator.mod.linkLibrary(lib);
+    try b.modules.putNoClobber(b.graph.arena, "sdl3", translator.mod);
 
     // Add the example
     const example = b.addExecutable(.{
@@ -136,7 +140,7 @@ pub fn build(b: *std.Build) !void {
             .optimize = optimize,
         }),
     });
-    example.root_module.addImport("sdl3", module);
+    example.root_module.addImport("sdl3", translator.mod);
 
     const build_example_step = b.step("example", "Build the example app");
     build_example_step.dependOn(&example.step);

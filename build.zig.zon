@@ -1,13 +1,22 @@
 .{
     .name = .sdl,
     .fingerprint = 0xec638ccbd103848b,
-    .version = "1.0.1+3.4.4",
-    .minimum_zig_version = "0.16.0",
+    .version = "1.0.1+3.4.x",
+    .minimum_zig_version = "0.17.0",
     .dependencies = .{
         .sdl = .{
-            .url = "https://github.com/libsdl-org/SDL/archive/refs/tags/release-3.4.4.tar.gz",
-            .hash = "N-V-__8AAL9L9AJxY67Fhxp52_VHlLps195MF3irmi4z8Qge",
-            .version = "3.4.4",
+            .url = "git+https://github.com/libsdl-org/SDL#release-3.4.12",
+            .hash = "N-V-__8AAD0-9wIMzG8dsliLwybOaKczJZMCLORvnK3Bnqq4",
+            .version = "3.4.12",
+            // This is the same as the SDL version, but the major version is elided since it's baked
+            // into the name. This mirrors the official build process. Additionally, it must be an
+            // actual semantic version, it cannot for example include "x" which is used for release
+            // candidates.
+            .so_version = "0.4.12",
+        },
+        .translate_c = .{
+            .url = "git+https://codeberg.org/ziglang/translate-c#ee20d6a7366abfcb9290184cbdbb0372a08bd9cf",
+            .hash = "translate_c-0.0.0-Q_BUWrw7BwCthYKOQHra8x2h-TxIHPLQnRnP2WbHL9HX",
         },
         .dbus = .{
             .version = "1.16.0",
