@@ -1,6 +1,6 @@
 [![CI](https://github.com/Games-By-Mason/sdl_zig/actions/workflows/ci.yaml/badge.svg)](https://github.com/Games-By-Mason/sdl_zig/actions)
 
-# SDL3 Zig
+# SDL Zig
 
 SDL3 ported to the Zig build system.
 

@@ -5,14 +5,14 @@
     .minimum_zig_version = "0.17.0",
     .dependencies = .{
         .sdl = .{
-            .url = "git+https://github.com/libsdl-org/SDL?ref=release-3.4.x#2d8ddf333ad55764d10138827434ef7fb6a02ad1",
-            .hash = "N-V-__8AAP499wJaqsUJUuTeTisB3PxJKFBIJRb90cpSQBVO",
-            .version = "3.4.x",
+            .url = "git+https://github.com/libsdl-org/SDL#release-3.4.12",
+            .hash = "N-V-__8AAD0-9wIMzG8dsliLwybOaKczJZMCLORvnK3Bnqq4",
+            .version = "3.4.12",
             // This is the same as the SDL version, but the major version is elided since it's baked
             // into the name. This mirrors the official build process. Additionally, it must be an
             // actual semantic version, it cannot for example include "x" which is used for release
             // candidates.
-            .so_version = "0.4.10",
+            .so_version = "0.4.12",
         },
         .translate_c = .{
             .url = "git+https://codeberg.org/ziglang/translate-c#ee20d6a7366abfcb9290184cbdbb0372a08bd9cf",
