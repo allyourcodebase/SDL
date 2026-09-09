@@ -2,7 +2,7 @@
     .name = .sdl,
     .fingerprint = 0xec638ccbd103848b,
     .version = "1.0.1+3.4.14",
-    .minimum_zig_version = "0.17.0-dev.1780+31500242f",
+    .minimum_zig_version = "0.17.0-dev.2106+f1c2b30b7",
     .dependencies = .{
         .sdl = .{
             .url = "https://github.com/libsdl-org/SDL/archive/refs/tags/release-3.4.14.tar.gz",
@@ -15,8 +15,8 @@
             .so_version = "0.4.16",
         },
         .translate_c = .{
-            .url = "git+https://codeberg.org/ziglang/translate-c/#330c97b4af783b724586c7ff626cf512afb19c21",
-            .hash = "translate_c-0.0.0-Q_BUWn1CBwC9g-axMDfnTrjyLYRyX-dr34bIHjPPz2Go",
+            .url = "git+https://codeberg.org/ziglang/translate-c#0944784e197e419433a21d4b28bfc65e48e7d514",
+            .hash = "translate_c-0.0.0-Q_BUWo5NBwBs3K0a-B1XbxEF3gFdTb75VgOE0FL-2qKL",
         },
         .dbus = .{
             .version = "1.16.2",
