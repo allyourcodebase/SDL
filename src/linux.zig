@@ -512,7 +512,7 @@ pub fn build(
 
     // Add the platform specific SDL sources
     lib.root_module.addCSourceFiles(.{
-        .files = &(sources.unix ++ sources.linux ++ sources.x11 ++ sources.pthread),
+        .files = &(sources.unix ++ sources.unix_dialog ++ sources.linux ++ sources.x11 ++ sources.pthread),
         .root = upstream.path("src"),
         .flags = root.flags,
     });

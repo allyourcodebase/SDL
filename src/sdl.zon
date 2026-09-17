@@ -452,6 +452,7 @@
         "haptic/darwin/SDL_syshaptic.c",
     },
     .cocoa = .{
+        "dialog/cocoa/SDL_cocoadialog.m",
         "filesystem/cocoa/SDL_sysfilesystem.m",
         "locale/macos/SDL_syslocale.m",
         "misc/macos/SDL_sysurl.m",
@@ -569,13 +570,15 @@
         "core/unix/SDL_gtk.c",
         "core/unix/SDL_libthai.c",
         "core/unix/SDL_poll.c",
+        "locale/unix/SDL_syslocale.c",
+        "misc/unix/SDL_sysurl.c",
+        "tray/unix/SDL_tray.c",
+    },
+    .unix_dialog = .{
         "dialog/unix/SDL_portaldialog.c",
         "dialog/unix/SDL_unixdialog.c",
         "dialog/unix/SDL_zenitydialog.c",
         "dialog/unix/SDL_zenitymessagebox.c",
-        "locale/unix/SDL_syslocale.c",
-        "misc/unix/SDL_sysurl.c",
-        "tray/unix/SDL_tray.c",
     },
     .wayland_protocols = .{
         "alpha-modifier-v1.xml",
