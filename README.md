@@ -91,6 +91,8 @@ This library provides a default configuration for common targets:
   * [x] Steam Deck
 * [x] Windows
 * [x] macOS (no cross compilation due to Apple licensing)
+* [x] iOS (the iOS SDK is not bundled with Zig; pass `-Dinclude_path=$SDK/usr/include -Dframework_path=$SDK/System/Library/Frameworks` with `SDK=$(xcrun --sdk iphoneos --show-sdk-path)`)
+* [x] Android (pass `-Dinclude_path=<ndk>/toolchains/llvm/prebuilt/<host>/sysroot/usr/include`)
 * [ ] [Emscripten (help wanted!)](https://github.com/allyourcodebase/SDL/issues/5)
 * [ ] [Consoles (help wanted!)](https://github.com/allyourcodebase/SDL/issues/6)
 
