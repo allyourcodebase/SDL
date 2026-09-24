@@ -1,49 +1,52 @@
 const std = @import("std");
-const build_zon = @import("../build.zig.zon");
 const sources = @import("sdl.zon");
 const root = @import("../build.zig");
-const Subsystems = root.Subsystems;
-const AllDrivers = root.Drivers;
 
 pub fn build(
     b: *std.Build,
     target: std.Target,
     lib: *std.Build.Step.Compile,
     build_config_h: *std.Build.Step.ConfigHeader,
+    paths: root.SystemPaths,
 ) void {
     _ = target;
 
     const upstream = b.dependency("sdl", .{});
 
-    // Add the platform specific dependency include paths
-    lib.root_module.addIncludePath(b.dependency("egl", .{}).path("api"));
-    lib.root_module.addIncludePath(b.dependency("opengl", .{}).path("api"));
+    // The iOS SDK is not bundled with Zig, so its headers and frameworks have to be passed in.
+    const SystemPaths = root.SystemPaths;
+    const framework_path = SystemPaths.print_missing_system_path_option(paths.framework, "framework_path", "iOS");
+    lib.root_module.addSystemIncludePath(SystemPaths.print_missing_system_path_option(paths.include, "include_path", "iOS"));
+    lib.root_module.addSystemFrameworkPath(framework_path);
+    // UIKit.framework's headers reach into UIUtilities.framework, which lives in the sibling
+    // SubFrameworks dir, not Frameworks. Apple's clang driver adds this search path implicitly;
+    // a plain `-F .../Frameworks` doesn't.
+    lib.root_module.addSystemFrameworkPath(framework_path.dirname().path(b, "SubFrameworks"));
+    if (paths.library) |p| lib.root_module.addLibraryPath(p);
 
     // Link with the platform specific system frameworks
-    lib.root_module.linkFramework("Cocoa", .{});
-    lib.root_module.linkFramework("IOKit", .{});
-    lib.root_module.linkFramework("ForceFeedback", .{});
-    lib.root_module.linkFramework("CoreVideo", .{});
-    lib.root_module.linkFramework("CoreAudio", .{});
-    lib.root_module.linkFramework("CoreHaptics", .{});
-    lib.root_module.linkFramework("CoreFoundation", .{});
-    lib.root_module.linkFramework("CoreMedia", .{});
+    lib.root_module.linkFramework("UIKit", .{});
+    lib.root_module.linkFramework("Foundation", .{});
     lib.root_module.linkFramework("CoreGraphics", .{});
-    lib.root_module.linkFramework("Carbon", .{});
-    lib.root_module.linkFramework("Metal", .{});
-    lib.root_module.linkFramework("QuartzCore", .{});
+    lib.root_module.linkFramework("CoreVideo", .{});
+    lib.root_module.linkFramework("CoreMedia", .{});
+    lib.root_module.linkFramework("CoreMotion", .{});
+    lib.root_module.linkFramework("CoreAudio", .{});
     lib.root_module.linkFramework("AudioToolbox", .{});
     lib.root_module.linkFramework("AVFoundation", .{});
-    lib.root_module.linkFramework("Foundation", .{});
-    lib.root_module.linkFramework("GameController", .{});
-    lib.root_module.linkFramework("CoreBluetooth", .{});
-    lib.root_module.linkFramework("UniformTypeIdentifiers", .{});
-    lib.root_module.linkSystemLibrary("iconv", .{});
+    lib.root_module.linkFramework("QuartzCore", .{});
+    lib.root_module.linkFramework("Metal", .{});
+    // `SDL_uikitopengles.m` and `SDL_uikitopenglview.m` use EAGL.
+    lib.root_module.linkFramework("OpenGLES", .{});
+    // `SDL_mfijoystick.m` uses `CHHapticEngine` for controller rumble, and both frameworks are
+    // unavailable on the oldest deployment targets SDL supports.
+    lib.root_module.linkFramework("GameController", .{ .weak = true });
+    lib.root_module.linkFramework("CoreHaptics", .{ .weak = true });
 
     // Add the platform specific sources
     const objc_flags = root.flags.* ++ [_][]const u8{"-fobjc-arc"};
     lib.root_module.addCSourceFiles(.{
-        .files = &(sources.cocoa ++ sources.apple ++ sources.darwin ++ sources.mac ++ sources.unix ++ sources.pthread),
+        .files = &(sources.uikit ++ sources.apple ++ sources.pthread),
         .root = upstream.path("src"),
         .flags = &objc_flags,
     });
@@ -171,29 +174,26 @@ pub fn build(
         .HAVE_GETPAGESIZE = 1,
         .HAVE_MPROTECT = 1,
         .HAVE_PTHREAD_SETNAME_NP = 1,
-        .HAVE_SEM_TIMEDWAIT = 1,
         .HAVE_SYSCTL = 1,
         .HAVE_SYSCTLBYNAME = 1,
         .HAVE_O_CLOEXEC = 1,
-        .USE_POSIX_SPAWN = 1,
 
         // Enable various audio drivers
         .SDL_AUDIO_DRIVER_COREAUDIO = 1,
         .SDL_AUDIO_DRIVER_DISK = 1,
         .SDL_AUDIO_DRIVER_DUMMY = 1,
 
-        // Enable various input drivers
-        .SDL_JOYSTICK_HIDAPI = 1,
-        .SDL_JOYSTICK_IOKIT = 1,
+        // Enable various input drivers. There is no HIDAPI support, iOS does not allow the
+        // required USB/Bluetooth access.
         .SDL_JOYSTICK_MFI = 1,
         .SDL_JOYSTICK_VIRTUAL = 1,
-        .SDL_HAPTIC_IOKIT = 1,
+        .SDL_HAPTIC_DUMMY = 1,
 
-        // Enable various process implementations
-        .SDL_PROCESS_POSIX = 1,
+        // Enable various process implementations. iOS does not allow spawning processes.
+        .SDL_PROCESS_DUMMY = 1,
 
         // Enable the sensor driver
-        .SDL_SENSOR_DUMMY = 1,
+        .SDL_SENSOR_COREMOTION = 1,
 
         // Enable various shared object loading systems
         .SDL_LOADSO_DLOPEN = 1,
@@ -209,32 +209,29 @@ pub fn build(
         .SDL_TIMER_UNIX = 1,
 
         // Enable various video drivers
-        .SDL_VIDEO_DRIVER_COCOA = 1,
+        .SDL_VIDEO_DRIVER_UIKIT = 1,
         .SDL_VIDEO_DRIVER_DUMMY = 1,
 
         // Enable video render APIs
         .SDL_VIDEO_RENDER_METAL = 1,
         .SDL_VIDEO_RENDER_GPU = 1,
-        .SDL_VIDEO_RENDER_OGL = 1,
         .SDL_VIDEO_RENDER_OGL_ES2 = 1,
 
-        // Enable OpenGL support
-        .SDL_VIDEO_OPENGL = 1,
-        .SDL_VIDEO_OPENGL_CGL = 1,
-        .SDL_VIDEO_OPENGL_EGL = 1,
+        // Enable OpenGL ES support. iOS provides it through EAGL, not EGL.
+        .SDL_VIDEO_OPENGL_ES = 1,
         .SDL_VIDEO_OPENGL_ES2 = 1,
 
-        // Enable Vulkan support
-        .SDL_VIDEO_VULKAN = 1,
-
-        // Enable Metal support
+        // Enable Metal support. Vulkan is left off, it would require a MoltenVK dependency.
         .SDL_VIDEO_METAL = 1,
 
         // Enable GPU support
         .SDL_GPU_METAL = 1,
 
         // Enable system power support
-        .SDL_POWER_MACOSX = 1,
+        .SDL_POWER_UIKIT = 1,
+
+        // iOS has no Steam client
+        .SDL_STORAGE_STEAM = false,
 
         // Enable filesystem support
         .SDL_FILESYSTEM_COCOA = 1,
@@ -244,11 +241,13 @@ pub fn build(
         .SDL_CAMERA_DRIVER_COREMEDIA = 1,
         .SDL_CAMERA_DRIVER_DUMMY = 1,
 
-        // Enable Steam storage
-        .SDL_STORAGE_STEAM = 1,
+        // Enable the on-screen keyboard and the launch screen
+        .SDL_IPHONE_KEYBOARD = 1,
+        .SDL_IPHONE_LAUNCHSCREEN = 1,
 
-        // Whether SDL_DYNAMIC_API needs dlopen
-        .DYNAPI_NEEDS_DLOPEN = 1,
+        // Enable the dummy dialog and tray implementations, iOS has neither
+        .SDL_DIALOG_DUMMY = 1,
+        .SDL_TRAY_DUMMY = 1,
 
         // Unused
         .SDL_AUDIO_DRIVER_ALSA_DYNAMIC = "",
