@@ -465,6 +465,7 @@
     .cocoa = .{
         "dialog/cocoa/SDL_cocoadialog.m",
         "misc/macos/SDL_sysurl.m",
+        "tray/cocoa/SDL_tray.m",
         "video/cocoa/SDL_cocoaclipboard.m",
         "video/cocoa/SDL_cocoaevents.m",
         "video/cocoa/SDL_cocoakeyboard.m",
@@ -597,6 +598,8 @@
         "core/unix/SDL_poll.c",
         "locale/unix/SDL_syslocale.c",
         "misc/unix/SDL_sysurl.c",
+    },
+    .unix_tray = .{
         "tray/unix/SDL_tray.c",
     },
     .unix_dialog = .{
