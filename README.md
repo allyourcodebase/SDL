@@ -91,8 +91,10 @@ This library provides a default configuration for common targets:
   * [x] Steam Deck
 * [x] Windows
 * [x] macOS (no cross compilation due to Apple licensing)
-* [ ] [Emscripten (help wanted!)](https://github.com/allyourcodebase/SDL3/issues/5)
-* [ ] [Consoles (help wanted!)](https://github.com/allyourcodebase/SDL3/issues/6)
+* [x] iOS (the iOS SDK is not bundled with Zig; pass `-Dinclude_path=$SDK/usr/include -Dframework_path=$SDK/System/Library/Frameworks` with `SDK=$(xcrun --sdk iphoneos --show-sdk-path)`)
+* [x] Android (pass `-Dinclude_path=<ndk>/toolchains/llvm/prebuilt/<host>/sysroot/usr/include`)
+* [ ] [Emscripten (help wanted!)](https://github.com/allyourcodebase/SDL/issues/5)
+* [ ] [Consoles (help wanted!)](https://github.com/allyourcodebase/SDL/issues/6)
 
 You can override the default target configuration by setting `default_target_config` to `false`, and then providing your own configuration. This is typically only necessary when your platform doesn't yet have a default configuration:
 ```zig

@@ -2,6 +2,8 @@ const std = @import("std");
 const linux = @import("src/linux.zig");
 const windows = @import("src/windows.zig");
 const macos = @import("src/macos.zig");
+const ios = @import("src/ios.zig");
+const android = @import("src/android.zig");
 const build_zon = @import("build.zig.zon");
 const Translator = @import("translate_c").Translator;
 
@@ -13,6 +15,19 @@ pub const flags = &.{
     "-fno-strict-aliasing",
     "-fvisibility=hidden",
     "-DUSING_GENERATED_CONFIG_H",
+};
+
+pub const SystemPaths = struct {
+    include: ?std.Build.LazyPath,
+    framework: ?std.Build.LazyPath,
+    library: ?std.Build.LazyPath,
+
+    pub fn print_missing_system_path_option(path: ?std.Build.LazyPath, comptime flag: []const u8, comptime platform: []const u8) std.Build.LazyPath {
+        return path orelse {
+            std.log.err("'-D" ++ flag ++ "' is required when building SDL for " ++ platform, .{});
+            std.process.exit(1);
+        };
+    }
 };
 
 pub fn build(b: *std.Build) !void {
@@ -36,6 +51,21 @@ pub fn build(b: *std.Build) !void {
         ,
     ) orelse .static;
 
+    // Cross-compiling to a target whose SDK isn't bundled with Zig (iOS, Android) needs the
+    // SDK's headers/frameworks/libs passed in explicitly. Scoped to the SDL library only, unlike
+    // `--sysroot` this does not re-roots paths across the whole build graph.
+    const system_paths: SystemPaths = .{
+        .include = b.option(std.Build.LazyPath, "include_path", "SDK include dir, e.g. $(xcrun --sdk iphoneos --show-sdk-path)/usr/include or <ndk sysroot>/usr/include"),
+        .framework = b.option(std.Build.LazyPath, "framework_path", "SDK framework dir, e.g. $(xcrun --sdk iphoneos --show-sdk-path)/System/Library/Frameworks"),
+        .library = b.option(std.Build.LazyPath, "library_path", "SDK library dir, e.g. $(xcrun --sdk iphoneos --show-sdk-path)/usr/lib"),
+    };
+
+    // Get the SO version. This is the same as the SDL version, but the major version is elided
+    // since it's baked into the name. This mirrors the official build process.
+    var sdl_so_version = comptime std.SemanticVersion.parse(build_zon.dependencies.sdl.version) catch unreachable;
+    assert(sdl_so_version.major == 3);
+    sdl_so_version.major = 0;
+
     // Create the library
     const lib = b.addLibrary(.{
         .name = "SDL3",
@@ -45,8 +75,7 @@ pub fn build(b: *std.Build) !void {
             .link_libc = true,
         }),
         .linkage = linkage,
-        .version = comptime std.SemanticVersion.parse(build_zon.dependencies.sdl.so_version)
-            catch unreachable,
+        .version = sdl_so_version,
     });
     switch (linkage) {
         .dynamic => {
@@ -100,9 +129,13 @@ pub fn build(b: *std.Build) !void {
 
         // Configure the build for the target platform
         switch (target.result.os.tag) {
-            .linux => linux.build(b, target.result, lib, build_config_h),
+            .linux => if (target.result.abi.isAndroid())
+                android.build(b, target.result, lib, build_config_h, system_paths)
+            else
+                linux.build(b, target.result, lib, build_config_h),
             .windows => windows.build(b, target.result, lib, build_config_h),
             .macos => macos.build(b, target.result, lib, build_config_h),
+            .ios => ios.build(b, target.result, lib, build_config_h, system_paths),
             else => @panic("target has no default config"),
         }
     }

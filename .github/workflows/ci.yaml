@@ -14,9 +14,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        zig-version: [0.17.0-dev.690+c5a61e899]
+        zig-version: [0.17.0-dev.2321+5a263ea67, master]
         os: [ubuntu-latest, windows-latest, macos-latest]
     runs-on: ${{ matrix.os }}
+    continue-on-error: ${{ matrix.zig-version == 'master' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -46,3 +47,10 @@ jobs:
         # We don't support cross compiling for macOS, so don't set a target just build
         # the native target
         run: zig build example --summary all
+
+      - name: Build for iOS
+        if: runner.os == 'macOS'
+        # The iOS SDK is not bundled with Zig, so point the build at Xcode's iPhoneOS SDK.
+        run: |
+          SDK="$(xcrun --sdk iphoneos --show-sdk-path)"
+          zig build -Dtarget=aarch64-ios -Dinclude_path="$SDK/usr/include" -Dframework_path="$SDK/System/Library/Frameworks" --summary all
