@@ -148,14 +148,7 @@ pub fn build(b: *std.Build) !void {
     const translator: Translator = .init(translate_c, .{
         .c_source_file = b.path("src/sdl.h"),
         .target = target,
-        // https://codeberg.org/ziglang/translate-c/issues/327
-        .optimize = switch (target.result.os.tag) {
-            .windows => switch (optimize) {
-                .ReleaseSafe => .ReleaseFast,
-                else => optimize,
-            },
-            else => optimize,
-        },
+        .optimize = optimize,
     });
     translator.defineCMacro("USING_GENERATED_CONFIG_H", "1");
     translator.addIncludePath(upstream.path("include"));
