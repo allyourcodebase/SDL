@@ -29,6 +29,16 @@ pub const SystemPaths = struct {
     }
 };
 
+pub const LinuxFeatures = struct {
+    audio: bool,
+    joystick: bool,
+    camera: bool,
+    kmsdrm: bool,
+    io_uring: bool,
+    fribidi: bool,
+    libthai: bool,
+};
+
 pub fn build(b: *std.Build) !void {
     // Get the upstream source and build options
     const upstream = b.dependency("sdl", .{});
@@ -57,6 +67,17 @@ pub fn build(b: *std.Build) !void {
         .include = b.option(std.Build.LazyPath, "include_path", "SDK include dir, e.g. $(xcrun --sdk iphoneos --show-sdk-path)/usr/include or <ndk sysroot>/usr/include"),
         .framework = b.option(std.Build.LazyPath, "framework_path", "SDK framework dir, e.g. $(xcrun --sdk iphoneos --show-sdk-path)/System/Library/Frameworks"),
         .library = b.option(std.Build.LazyPath, "library_path", "SDK library dir, e.g. $(xcrun --sdk iphoneos --show-sdk-path)/usr/lib"),
+    };
+
+    // Each one also drops the dev headers it needs from the sysroot. Linux only for now.
+    const linux_features: LinuxFeatures = .{
+        .audio = b.option(bool, "audio", "Linux: audio subsystem (alsa, pulse, pipewire, jack, sndio headers), defaults to true") orelse true,
+        .joystick = b.option(bool, "joystick", "Linux: joystick, gamepad, haptic and hidapi (libudev, libusb headers), defaults to true") orelse true,
+        .camera = b.option(bool, "camera", "Linux: camera subsystem (libudev, pipewire headers), defaults to true") orelse true,
+        .kmsdrm = b.option(bool, "kmsdrm", "Linux: KMSDRM video driver (libdrm, gbm, libudev headers), defaults to true") orelse true,
+        .io_uring = b.option(bool, "io_uring", "Linux: io_uring async IO backend (liburing header), defaults to true") orelse true,
+        .fribidi = b.option(bool, "fribidi", "Linux: bidirectional text in message boxes (fribidi header), defaults to true") orelse true,
+        .libthai = b.option(bool, "libthai", "Linux: Thai line breaking in message boxes (libthai header), defaults to true") orelse true,
     };
 
     // Get the SO version. This is the same as the SDL version, but the major version is elided
@@ -131,7 +152,7 @@ pub fn build(b: *std.Build) !void {
             .linux => if (target.result.abi.isAndroid())
                 android.build(b, target.result, lib, build_config_h, system_paths)
             else
-                linux.build(b, target.result, lib, build_config_h, system_paths),
+                linux.build(b, target.result, lib, build_config_h, system_paths, linux_features),
             .windows => windows.build(b, target.result, lib, build_config_h),
             .macos => macos.build(b, target.result, lib, build_config_h),
             .ios => ios.build(b, target.result, lib, build_config_h, system_paths),

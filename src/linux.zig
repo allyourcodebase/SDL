@@ -11,6 +11,7 @@ pub fn build(
     lib: *std.Build.Step.Compile,
     build_config_h: *std.Build.Step.ConfigHeader,
     paths: root.SystemPaths,
+    features: root.LinuxFeatures,
 ) void {
     const upstream = b.dependency("sdl", .{});
 
@@ -225,46 +226,17 @@ pub fn build(
         .HAVE_IBUS_IBUS_H = 1,
         .HAVE_INOTIFY_INIT1 = 1,
         .HAVE_INOTIFY = 1,
-        .HAVE_LIBUSB = 1,
         .HAVE_O_CLOEXEC = 1,
 
         .HAVE_LINUX_INPUT_H = 1,
-        .HAVE_LIBUDEV_H = 1,
         .HAVE_LIBDECOR_H = 1,
-        .HAVE_LIBURING_H = 1,
-        .HAVE_FRIBIDI_H = 1,
-        .SDL_FRIBIDI_DYNAMIC = formatDynamic("libfribidi.so.0"),
-        .HAVE_LIBTHAI_H = 1,
-        .SDL_LIBTHAI_DYNAMIC = formatDynamic("libthai.so.0"),
 
         .USE_POSIX_SPAWN = 1,
-
-        // Enable various audio drivers
-        .SDL_AUDIO_DRIVER_ALSA = 1,
-        .SDL_AUDIO_DRIVER_ALSA_DYNAMIC = formatDynamic("libasound.so.2"),
-        .SDL_AUDIO_DRIVER_JACK = 1,
-        .SDL_AUDIO_DRIVER_JACK_DYNAMIC = formatDynamic("libjack.so.0"),
-        .SDL_AUDIO_DRIVER_OSS = 1,
-        .SDL_AUDIO_DRIVER_PIPEWIRE = 1,
-        .SDL_AUDIO_DRIVER_PIPEWIRE_DYNAMIC = formatDynamic("libpipewire-0.3.so.0"),
-        .SDL_AUDIO_DRIVER_PULSEAUDIO = 1,
-        .SDL_AUDIO_DRIVER_PULSEAUDIO_DYNAMIC = formatDynamic("libpulse.so.0"),
-        .SDL_AUDIO_DRIVER_SNDIO = 1,
-        // Note that `libsndio` is not part of the SLR.
-        .SDL_AUDIO_DRIVER_SNDIO_DYNAMIC = formatDynamic("libsndio.so.7"),
-        .SDL_AUDIO_DRIVER_DUMMY = 1,
 
         // Enable various input drivers
         .SDL_INPUT_LINUXEV = 1,
         .SDL_INPUT_LINUXKD = 1,
         .SDL_HAVE_MACHINE_JOYSTICK_H = 1,
-        .SDL_JOYSTICK_HIDAPI = 1,
-        .SDL_JOYSTICK_LINUX = 1,
-        .SDL_JOYSTICK_VIRTUAL = 1,
-        .SDL_HAPTIC_LINUX = 1,
-
-        .SDL_LIBUSB_DYNAMIC = formatDynamic("libusb-1.0.so.0"),
-        .SDL_UDEV_DYNAMIC = formatDynamic("libudev.so.1"),
 
         // Enable various process implementations
         .SDL_PROCESS_POSIX = 1,
@@ -290,9 +262,6 @@ pub fn build(
         // but it isn't a known good version it's just whatever you happen to have on your computer.
         // If you were to copy that in, you'd make your application less portable without actually
         // getting any guarantees about correctness.
-        .SDL_VIDEO_DRIVER_KMSDRM = 1,
-        .SDL_VIDEO_DRIVER_KMSDRM_DYNAMIC = formatDynamic("libdrm.so.2"),
-        .SDL_VIDEO_DRIVER_KMSDRM_DYNAMIC_GBM = formatDynamic("libgbm.so.1"),
         .SDL_VIDEO_DRIVER_ROCKCHIP = 1,
         .SDL_VIDEO_DRIVER_OPENVR = 0, // https://github.com/libsdl-org/SDL/issues/11329
         .SDL_VIDEO_DRIVER_WAYLAND = 1,
@@ -355,12 +324,6 @@ pub fn build(
         // Enable system FSops support
         .SDL_FSOPS_POSIX = 1,
 
-        // Enable camera subsystem
-        .SDL_CAMERA_DRIVER_V4L2 = 1,
-        .SDL_CAMERA_DRIVER_PIPEWIRE = 1,
-        .SDL_CAMERA_DRIVER_PIPEWIRE_DYNAMIC = formatDynamic("libpipewire-0.3.so.0"),
-        .SDL_CAMERA_DRIVER_DUMMY = 1,
-
         // Whether SDL_DYNAMIC_API needs dlopen
         .DYNAPI_NEEDS_DLOPEN = 1,
 
@@ -379,6 +342,65 @@ pub fn build(
 
         // Unused
         .SDL_EMSCRIPTEN_PERSISTENT_PATH_STRING = "",
+    });
+
+    // Optional features, see `LinuxFeatures`. A disabled subsystem makes SDL_Init fail for it.
+    if (features.audio) build_config_h.addValues(.{
+        .SDL_AUDIO_DRIVER_ALSA = 1,
+        .SDL_AUDIO_DRIVER_JACK = 1,
+        .SDL_AUDIO_DRIVER_OSS = 1,
+        .SDL_AUDIO_DRIVER_PIPEWIRE = 1,
+        .SDL_AUDIO_DRIVER_PULSEAUDIO = 1,
+        .SDL_AUDIO_DRIVER_SNDIO = 1,
+        .SDL_AUDIO_DRIVER_DUMMY = 1,
+    }) else build_config_h.addValues(.{ .SDL_AUDIO_DISABLED = 1 });
+
+    if (features.joystick) build_config_h.addValues(.{
+        .HAVE_LIBUSB = 1,
+        .SDL_JOYSTICK_HIDAPI = 1,
+        .SDL_JOYSTICK_LINUX = 1,
+        .SDL_JOYSTICK_VIRTUAL = 1,
+        .SDL_HAPTIC_LINUX = 1,
+    }) else build_config_h.addValues(.{
+        .SDL_JOYSTICK_DISABLED = 1,
+        .SDL_HAPTIC_DISABLED = 1,
+        .SDL_HIDAPI_DISABLED = 1,
+    });
+
+    if (features.camera) build_config_h.addValues(.{
+        .SDL_CAMERA_DRIVER_V4L2 = 1,
+        .SDL_CAMERA_DRIVER_PIPEWIRE = 1,
+        .SDL_CAMERA_DRIVER_DUMMY = 1,
+    }) else build_config_h.addValues(.{ .SDL_CAMERA_DISABLED = 1 });
+
+    if (features.kmsdrm) build_config_h.addValues(.{
+        .SDL_VIDEO_DRIVER_KMSDRM = 1,
+    });
+
+    const udev = features.joystick or features.camera or features.kmsdrm;
+    if (udev) build_config_h.addValues(.{ .HAVE_LIBUDEV_H = 1 });
+
+    if (features.io_uring) build_config_h.addValues(.{ .HAVE_LIBURING_H = 1 });
+
+    if (features.fribidi) build_config_h.addValues(.{ .HAVE_FRIBIDI_H = 1 });
+
+    if (features.libthai) build_config_h.addValues(.{ .HAVE_LIBTHAI_H = 1 });
+
+    // `@VAR@` substitutions need a value even when unset, `null` leaves them undefined.
+    // Note that `libsndio` is not part of the SLR.
+    build_config_h.addValues(.{
+        .SDL_AUDIO_DRIVER_ALSA_DYNAMIC = dynamicIf(features.audio, "libasound.so.2"),
+        .SDL_AUDIO_DRIVER_JACK_DYNAMIC = dynamicIf(features.audio, "libjack.so.0"),
+        .SDL_AUDIO_DRIVER_PIPEWIRE_DYNAMIC = dynamicIf(features.audio, "libpipewire-0.3.so.0"),
+        .SDL_AUDIO_DRIVER_PULSEAUDIO_DYNAMIC = dynamicIf(features.audio, "libpulse.so.0"),
+        .SDL_AUDIO_DRIVER_SNDIO_DYNAMIC = dynamicIf(features.audio, "libsndio.so.7"),
+        .SDL_LIBUSB_DYNAMIC = dynamicIf(features.joystick, "libusb-1.0.so.0"),
+        .SDL_CAMERA_DRIVER_PIPEWIRE_DYNAMIC = dynamicIf(features.camera, "libpipewire-0.3.so.0"),
+        .SDL_VIDEO_DRIVER_KMSDRM_DYNAMIC = dynamicIf(features.kmsdrm, "libdrm.so.2"),
+        .SDL_VIDEO_DRIVER_KMSDRM_DYNAMIC_GBM = dynamicIf(features.kmsdrm, "libgbm.so.1"),
+        .SDL_UDEV_DYNAMIC = dynamicIf(udev, "libudev.so.1"),
+        .SDL_FRIBIDI_DYNAMIC = dynamicIf(features.fribidi, "libfribidi.so.0"),
+        .SDL_LIBTHAI_DYNAMIC = dynamicIf(features.libthai, "libthai.so.0"),
     });
 }
 
@@ -439,4 +461,8 @@ fn pkgConfigVersion(b: *std.Build, library: std.Build.LazyPath, name: []const u8
 
 fn formatDynamic(comptime name: []const u8) []const u8 {
     return std.fmt.comptimePrint("\"{s}\"", .{name});
+}
+
+fn dynamicIf(enabled: bool, comptime name: []const u8) ?[]const u8 {
+    return if (enabled) formatDynamic(name) else null;
 }
