@@ -131,7 +131,7 @@ pub fn build(b: *std.Build) !void {
             .linux => if (target.result.abi.isAndroid())
                 android.build(b, target.result, lib, build_config_h, system_paths)
             else
-                linux.build(b, target.result, lib, build_config_h),
+                linux.build(b, target.result, lib, build_config_h, system_paths),
             .windows => windows.build(b, target.result, lib, build_config_h),
             .macos => macos.build(b, target.result, lib, build_config_h),
             .ios => ios.build(b, target.result, lib, build_config_h, system_paths),

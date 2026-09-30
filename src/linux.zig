@@ -1,5 +1,5 @@
 const std = @import("std");
-const build_zon = @import("../build.zig.zon");
+const builtin = @import("builtin");
 const sources = @import("sdl.zon");
 const root = @import("../build.zig");
 const Subsystems = root.Subsystems;
@@ -10,504 +10,42 @@ pub fn build(
     target: std.Target,
     lib: *std.Build.Step.Compile,
     build_config_h: *std.Build.Step.ConfigHeader,
+    paths: root.SystemPaths,
 ) void {
     const upstream = b.dependency("sdl", .{});
 
-    // Provide the platform specific dependency include paths
+    // All third party headers come from the target's sysroot (`-Dinclude_path`/`-Dlibrary_path`),
+    // or from the host when building natively on Linux. Nothing is linked, SDL dlopens everything.
+    const native = builtin.os.tag == .linux;
+    const library: std.Build.LazyPath = if (native)
+        paths.library orelse .{ .cwd_relative = b.fmt("/usr/lib/{s}-linux-gnu", .{@tagName(target.cpu.arch)}) }
+    else
+        root.SystemPaths.print_missing_system_path_option(paths.library, "library_path (<sysroot>/usr/lib/<triple>)", "Linux");
     {
-        // Set up the config include write file step
-        const generated = b.addWriteFiles();
-        lib.root_module.addIncludePath(generated.getDirectory());
+        const include: std.Build.LazyPath = if (native)
+            paths.include orelse .{ .cwd_relative = "/usr/include" }
+        else
+            root.SystemPaths.print_missing_system_path_option(paths.include, "include_path (<sysroot>/usr/include)", "Linux");
 
-        // Provide the D-Bus headers
-        {
-            const dbus = b.dependency("dbus", .{});
-            lib.root_module.addIncludePath(dbus.path("."));
+        // `-idirafter` so Zig's bundled libc headers win over the sysroot's.
+        lib.root_module.addAfterIncludePath(include);
+        // The pkg-config `Cflags` of the libraries SDL uses.
+        for ([_][]const u8{
+            "dbus-1.0",
+            "glib-2.0",
+            "ibus-1.0",
+            "pipewire-0.3",
+            "spa-0.2",
+            "libdrm",
+            "libdecor-0",
+            "fribidi",
+            "libusb-1.0",
+        }) |sub| lib.root_module.addAfterIncludePath(include.path(b, sub));
+        // Arch specific config headers (`glibconfig.h`, `dbus/dbus-arch-deps.h`).
+        for ([_][]const u8{ "glib-2.0/include", "dbus-1.0/include" }) |sub|
+            lib.root_module.addAfterIncludePath(library.path(b, sub));
 
-            const version_string = build_zon.dependencies.dbus.version;
-            const version = comptime std.SemanticVersion.parse(version_string) catch unreachable;
-            std.debug.assert(target.cTypeByteSize(.short) == 2);
-            std.debug.assert(target.cTypeByteSize(.int) == 4);
-            const dbus_config = b.addConfigHeader(
-                .{
-                    .style = .{ .autoconf_at = dbus.path("dbus/dbus-arch-deps.h.in") },
-                    .include_path = "dbus/dbus-arch-deps.h",
-                },
-                .{
-                    .DBUS_INT32_TYPE = "int",
-                    .DBUS_INT16_TYPE = "short",
-                    .DBUS_SIZEOF_VOID_P = target.ptrBitWidth() / 8,
-
-                    .DBUS_MAJOR_VERSION = @as(i64, version.major),
-                    .DBUS_MINOR_VERSION = @as(i64, version.minor),
-                    .DBUS_MICRO_VERSION = @as(i64, version.patch),
-                    .DBUS_VERSION = version_string,
-                },
-            );
-            _ = generated.addCopyFile(
-                dbus_config.getOutputFile(),
-                dbus_config.include_path,
-            );
-
-            if (target.cTypeByteSize(.int) == 2) {
-                dbus_config.addValues(.{
-                    .DBUS_INT16_TYPE = "int",
-                });
-            } else if (target.cTypeByteSize(.short) == 2) {
-                dbus_config.addValues(.{
-                    .DBUS_INT16_TYPE = "short",
-                });
-            } else {
-                @panic("Could not find a 16-bit integer type");
-            }
-
-            if (target.cTypeByteSize(.int) == 4) {
-                dbus_config.addValues(.{
-                    .DBUS_INT32_TYPE = "int",
-                });
-            } else if (target.cTypeByteSize(.long) == 4) {
-                dbus_config.addValues(.{
-                    .DBUS_INT32_TYPE = "long",
-                });
-            } else if (target.cTypeByteSize(.longlong) == 4) {
-                dbus_config.addValues(.{
-                    .DBUS_INT32_TYPE = "long long",
-                });
-            } else {
-                @panic("Could not find a 32-bit integer type");
-            }
-
-            if (target.cTypeByteSize(.int) == 8) {
-                dbus_config.addValues(.{
-                    .DBUS_INT64_TYPE = "int",
-                    .DBUS_INT64_CONSTANT = "(val)",
-                    .DBUS_UINT64_CONSTANT = "(val##U)",
-                    .DBUS_INT64_MODIFIER = "",
-                });
-            } else if (target.cTypeByteSize(.long) == 8) {
-                dbus_config.addValues(.{
-                    .DBUS_INT64_TYPE = "long",
-                    .DBUS_INT64_CONSTANT = "(val##L)",
-                    .DBUS_UINT64_CONSTANT = "(val##UL)",
-                    .DBUS_INT64_MODIFIER = "l",
-                });
-            } else if (target.cTypeByteSize(.longlong) == 8) {
-                dbus_config.addValues(.{
-                    .DBUS_INT64_TYPE = "long long",
-                    .DBUS_INT64_CONSTANT = "(val##LL)",
-                    .DBUS_UINT64_CONSTANT = "(val##ULL)",
-                    .DBUS_INT64_MODIFIER = "ll",
-                });
-            } else {
-                @panic("Could not find a 64-bit integer type");
-            }
-        }
-
-        // Provide the IBus headers
-        {
-            // The headers are here
-            lib.root_module.addIncludePath(b.dependency("ibus", .{}).path("src"));
-
-            // They depend on the GLib headers, which require some configuration
-            lib.root_module.addIncludePath(b.path("deps/glib/upstream/include"));
-            lib.root_module.addIncludePath(b.path("deps/glib/upstream/include/glib"));
-            lib.root_module.addIncludePath(b.path("deps/glib/upstream/include/gmodule"));
-            lib.root_module.addIncludePath(b.path("deps/glib/cached/include"));
-            lib.root_module.addIncludePath(b.path("deps/glib/cached/include/glib"));
-            lib.root_module.addIncludePath(b.path("deps/glib/cached/include/gmodule"));
-
-            const glib_config = b.addConfigHeader(.{
-                .style = .{ .cmake = b.path("deps/glib/glibconfig.h.in") },
-                .include_path = "glibconfig.h",
-            }, .{});
-            _ = generated.addCopyFile(glib_config.getOutputFile(), glib_config.include_path);
-
-            // Configure glib
-            {
-                // Defines
-                const version_string = @import("../deps/glib/info.zon").version;
-                const version = comptime std.SemanticVersion.parse(version_string) catch unreachable;
-                glib_config.addValues(.{
-                    .GLIB_HAVE_ALLOCA_H = 1,
-                    .GLIB_USING_SYSTEM_PRINTF = 1,
-                    // Shows up as empty instead of 0, but never referenced anyway
-                    .G_HAVE_GROWING_STACK = "0",
-                    .G_ATOMIC_LOCK_FREE = 1,
-                    .G_HAVE_FREE_SIZED = 1,
-                    .GLIB_MAJOR_VERSION = @as(i64, version.major),
-                    .GLIB_MINOR_VERSION = @as(i64, version.minor),
-                    .GLIB_MICRO_VERSION = @as(i64, version.patch),
-                    // Always the same on Linux
-                    .g_dir_separator = "/",
-                    .g_searchpath_separator = ":",
-                    .g_pid_type = "int",
-                    .g_pid_format = "i",
-                    .g_module_suffix = "so",
-                    // These are hard coded in the meson build
-                    .g_pollin = "1",
-                    .g_pollout = "4",
-                    .g_pollpri = "2",
-                    .g_pollhup = "16",
-                    .g_pollerr = "8",
-                    .g_pollnval = "32",
-                    // These are the values I got when building form source. I would expect them to be
-                    // the same for all Linux targets, but I'm not actually sure how they were
-                    // generated.
-                    .g_af_unix = "1",
-                    .g_af_inet = "2",
-                    .g_af_inet6 = "10",
-                    .g_msg_oob = "1",
-                    .g_msg_peek = "2",
-                    .g_msg_dontroute = "4",
-                });
-
-                // Integer sizes
-                std.debug.assert(target.cTypeByteSize(.short) == 2);
-                std.debug.assert(target.cTypeByteSize(.int) == 4);
-                glib_config.addValues(.{
-                    .gint16 = "short",
-                    .gint16_modifier = "h",
-                    .gint16_format = "hi",
-                    .guint16_format = "hu",
-                    .gint32 = "int",
-                    .gint32_modifier = "",
-                    .gint32_format = "i",
-                    .guint32_format = "u",
-                });
-                if (target.cTypeByteSize(.int) == 8) {
-                    glib_config.addValues(.{
-                        .glib_extension = "",
-                        .gint64 = "int",
-                        .gint64_constant = "(val)",
-                        .guint64_constant = "(val##U)",
-                        .gint64_modifier = "",
-                        .gint64_format = "i",
-                        .guint64_format = "u",
-                    });
-                } else if (target.cTypeByteSize(.long) == 8) {
-                    glib_config.addValues(.{
-                        .glib_extension = "",
-                        .gint64 = "long",
-                        .gint64_constant = "(val##L)",
-                        .guint64_constant = "(val##UL)",
-                        .gint64_modifier = "l",
-                        .gint64_format = "li",
-                        .guint64_format = "lu",
-                    });
-                } else if (target.cTypeByteSize(.longlong) == 8) {
-                    glib_config.addValues(.{
-                        .glib_extension = "",
-                        .gint64 = "long long",
-                        .gint64_constant = "(val##LL)",
-                        .guint64_constant = "(val##ULL)",
-                        .gint64_modifier = "ll",
-                        .gint64_format = "lli",
-                        .guint64_format = "llu",
-                    });
-                } else {
-                    @panic("Could not find a 64-bit integer type");
-                }
-                if (target.cTypeBitSize(.int) == target.ptrBitWidth()) {
-                    glib_config.addValues(.{
-                        .glib_size_type_define = "int",
-                        .gsize_modifier = "u",
-                        .gssize_modifier = "",
-                        .gsize_format = "u",
-                        .gssize_format = "i",
-                        .glib_msize_type = "INT",
-                        .g_pollfd_format = "%i",
-                        .glib_gpi_cast = "(gint)",
-                        .glib_gpui_cast = "(guint)",
-                        .glib_intptr_type_define = "int",
-                        .gintptr_modifier = "",
-                        .gintptr_format = "i",
-                        .guintptr_format = "u",
-                    });
-                } else if (target.cTypeBitSize(.long) == target.ptrBitWidth()) {
-                    glib_config.addValues(.{
-                        .glib_size_type_define = "long",
-                        .gsize_modifier = "l",
-                        .gssize_modifier = "l",
-                        .gsize_format = "lu",
-                        .gssize_format = "li",
-                        .glib_msize_type = "LONG",
-                        .g_pollfd_format = "%d",
-                        .glib_gpi_cast = "(glong)",
-                        .glib_gpui_cast = "(gulong)",
-                        .glib_intptr_type_define = "long",
-                        .gintptr_modifier = "l",
-                        .gintptr_format = "li",
-                        .guintptr_format = "lu",
-                    });
-                } else {
-                    // Upstream doesn't have required typedefs for long long so that's not an option
-                    @panic("Could not find a pointer sized integer type");
-                }
-                glib_config.addValues(.{
-                    .glib_void_p = target.ptrBitWidth() / 8,
-                    .glib_long = target.cTypeByteSize(.long),
-                    .glib_size_t = target.ptrBitWidth() / 8,
-                    .glib_ssize_t = target.ptrBitWidth() / 8,
-                });
-
-                // Endianness
-                const endianness = std.Target.Cpu.Arch.endian(target.cpu.arch);
-                glib_config.addValues(.{
-                    .glib_os = "#define G_OS_UNIX",
-                    .glib_vacopy = "#define G_VA_COPY_AS_ARRAY 1",
-                    .g_threads_impl_def = "POSIX",
-                    .g_bs_native = switch (endianness) {
-                        .little => "LE",
-                        .big => "BE",
-                    },
-                    .g_bs_alien = switch (endianness) {
-                        .little => "BE",
-                        .big => "LE",
-                    },
-                    .glongbits = target.cTypeBitSize(.long),
-                    .gintbits = target.cTypeBitSize(.int),
-                    .gsizebits = target.ptrBitWidth(),
-                    .g_byte_order = switch (endianness) {
-                        .little => "G_LITTLE_ENDIAN",
-                        .big => "G_BIG_ENDIAN",
-                    },
-                });
-            }
-
-            const version_h = b.addConfigHeader(.{
-                .style = .{
-                    .autoconf_at = b.path("deps/glib/upstream/include/glib/gversionmacros.h.in"),
-                },
-                .include_path = "glib/gversionmacros.h",
-            }, .{
-                .GLIB_VERSIONS = @embedFile("../deps/glib/glib_versions.h"),
-            });
-            _ = generated.addCopyFile(version_h.getOutputFile(), version_h.include_path);
-
-            lib.root_module.addIncludePath(b.path("deps/glib/include"));
-        }
-
-        // Provide the X11 headers
-        {
-            {
-                const x11 = b.dependency("x11", .{});
-
-                lib.root_module.addIncludePath(x11.path("include"));
-
-                const config = b.addConfigHeader(.{
-                    .style = .{ .autoconf_undef = x11.path("include/X11/XlibConf.h.in") },
-                    .include_path = "X11/XlibConf.h",
-                }, .{
-                    .XTHREADS = 1,
-                    .XUSE_MTSAFE_API = 1,
-                });
-                _ = generated.addCopyFile(config.getOutputFile(), config.include_path);
-            }
-
-            // Provide the Xcursor headers
-            {
-                const xcursor = b.dependency("xcursor", .{});
-                const version_string = build_zon.dependencies.xcursor.version;
-                const version = comptime std.SemanticVersion.parse(version_string) catch unreachable;
-                const config = b.addConfigHeader(.{
-                    .style = .{ .autoconf_undef = xcursor.path("include/X11/Xcursor/Xcursor.h.in") },
-                    .include_path = "X11/Xcursor/Xcursor.h",
-                }, .{
-                    .XCURSOR_LIB_MAJOR = @as(i64, version.major),
-                    .XCURSOR_LIB_MINOR = @as(i64, version.minor),
-                    .XCURSOR_LIB_REVISION = @as(i64, version.patch),
-                });
-                _ = generated.addCopyFile(config.getOutputFile(), config.include_path);
-            }
-        }
-
-        // Provide the liburing headers
-        {
-            lib.root_module.addIncludePath(b.path("deps/liburing/include"));
-            const compat_h = b.addConfigHeader(.{
-                .style = .{ .autoconf_undef = b.path("deps/liburing/compat.h.in") },
-                .include_path = "liburing/compat.h",
-            }, .{
-                // Recent kernels should always have these features, so they're hard coded to `1`
-                // for now, but this can be made more flexible in the future if needed.
-                .HAS_KERNEL_RWF_T = 1,
-                .HAS_KERNEL_TIMESPEC = 1,
-                .HAS_OPENAT_2 = 1,
-                .HAS_SYS_STAT = 1,
-                .HAS_FUTEX_WAITV = 1,
-                .HAS_IDTYPE_T = 1,
-            });
-            _ = generated.addCopyFile(compat_h.getOutputFile(), compat_h.include_path);
-
-            const version_string = build_zon.dependencies.decor.version;
-            const version = comptime std.SemanticVersion.parse(version_string) catch unreachable;
-            const version_h = b.addConfigHeader(.{
-                .style = .{ .autoconf_undef = b.path("deps/liburing/io_uring_version.h.in") },
-                .include_path = "liburing/io_uring_version.h",
-            }, .{
-                .IO_URING_VERSION_MAJOR = @as(i64, version.major),
-                .IO_URING_VERSION_MINOR = @as(i64, version.minor),
-            });
-            _ = generated.addCopyFile(version_h.getOutputFile(), version_h.include_path);
-        }
-
-        // Provide the pipewire headers
-        {
-            const pipewire = b.dependency("pipewire", .{});
-            lib.root_module.addIncludePath(pipewire.path("spa/include"));
-            lib.root_module.addIncludePath(pipewire.path("src"));
-            const version_string = build_zon.dependencies.pipewire.version;
-            const api_version_string = build_zon.dependencies.pipewire.api_version;
-            const version = comptime std.SemanticVersion.parse(version_string) catch unreachable;
-            const config_h = b.addConfigHeader(.{
-                .style = .{ .autoconf_at = pipewire.path("src/pipewire/version.h.in") },
-                .include_path = "pipewire/version.h",
-            }, .{
-                .PIPEWIRE_VERSION_MAJOR = @as(i64, version.major),
-                .PIPEWIRE_VERSION_MINOR = @as(i64, version.minor),
-                .PIPEWIRE_VERSION_MICRO = @as(i64, version.patch),
-                .PIPEWIRE_API_VERSION = api_version_string,
-            });
-            _ = generated.addCopyFile(config_h.getOutputFile(), config_h.include_path);
-        }
-
-        // Provide the pulseaudio headers
-        {
-            @setEvalBranchQuota(2000);
-            // Workaround for cross compilation, see comment in `build.zig.zon`
-            const pulseaudio_name = switch (@import("builtin").os.tag) {
-                .windows => "pulseaudio_windows",
-                else => "pulseaudio",
-            };
-            if (b.lazyDependency(pulseaudio_name, .{})) |pulseaudio| {
-                lib.root_module.addIncludePath(pulseaudio.path("src"));
-                const version_string = build_zon.dependencies.pulseaudio.version;
-                const version = comptime std.SemanticVersion.parse(version_string) catch unreachable;
-                const api_version_string = build_zon.dependencies.pulseaudio.api_version;
-                const api_version = comptime std.fmt.parseInt(u32, api_version_string, 10) catch unreachable;
-                const protocol_version_string = build_zon.dependencies.pulseaudio.protocol_version;
-                const protocol_version = comptime std.fmt.parseInt(u32, protocol_version_string, 10) catch unreachable;
-                const version_h = b.addConfigHeader(.{
-                    .style = .{ .cmake = pulseaudio.path("src/pulse/version.h.in") },
-                    .include_path = "pulse/version.h",
-                }, .{
-                    .PA_MAJOR = @as(i64, version.major),
-                    .PA_MINOR = @as(i64, version.minor),
-                    .PA_API_VERSION = api_version,
-                    .PA_PROTOCOL_VERSION = protocol_version,
-                });
-                _ = generated.addCopyFile(version_h.getOutputFile(), version_h.include_path);
-            }
-        }
-
-        // Provide the Wayland headers
-        {
-            const wayland = b.dependency("wayland", .{});
-            lib.root_module.addIncludePath(wayland.path("src"));
-            lib.root_module.addIncludePath(wayland.path("cursor"));
-            lib.root_module.addIncludePath(wayland.path("egl"));
-
-            // Provide the config header
-            const version_string = build_zon.dependencies.wayland.version;
-            const version = comptime std.SemanticVersion.parse(version_string) catch unreachable;
-            const version_h = b.addConfigHeader(.{
-                .style = .{ .cmake = wayland.path("src/wayland-version.h.in") },
-                .include_path = "wayland-version.h",
-            }, .{
-                .WAYLAND_VERSION_MAJOR = @as(i64, version.major),
-                .WAYLAND_VERSION_MINOR = @as(i64, version.minor),
-                .WAYLAND_VERSION_MICRO = @as(i64, version.patch),
-                .WAYLAND_VERSION = version_string,
-            });
-            _ = generated.addCopyFile(version_h.getOutputFile(), version_h.include_path);
-        }
-
-        // Provide the Direct Rendering Manager headers
-        {
-            lib.root_module.addIncludePath(b.path("deps/drm/include"));
-            lib.root_module.addIncludePath(b.path("deps/drm/include/drm"));
-            lib.root_module.addIncludePath(b.path("deps/mesa/include/gbm"));
-        }
-
-        // Provide the Alsa headers
-        {
-            const alsa = b.dependency("alsa", .{});
-            _ = generated.addCopyDirectory(alsa.path("include"), "alsa", .{
-                .include_extensions = &.{".h"},
-            });
-            lib.root_module.addIncludePath(generated.getDirectory());
-            lib.root_module.addIncludePath(b.path("deps/alsa/include"));
-        }
-
-        // Provide the Fribidi headers
-        {
-            const fribidi = b.dependency("fribidi", .{});
-            const interface_version = build_zon.dependencies.fribidi.interface_version;
-            const version_string = build_zon.dependencies.fribidi.version;
-            const version = comptime std.SemanticVersion.parse(version_string) catch unreachable;
-
-            const unicode_version_string = build_zon.dependencies.fribidi.unicode_version;
-            const unicode_version = comptime std.SemanticVersion.parse(unicode_version_string) catch unreachable;
-
-            const fribidi_config_path = "fribidi-config.h";
-            const version_h = b.addConfigHeader(.{
-                .style = .{ .cmake = fribidi.path("lib/fribidi-config.h.in") },
-                .include_path = fribidi_config_path,
-            }, .{
-                .configure_input = fribidi_config_path,
-
-                .PACKAGE = "fribidi",
-                .PACKAGE_NAME = "GNU FriBidi",
-                .PACKAGE_BUGREPORT = "https://github.com/fribidi/fribidi/issues/new",
-
-                .FRIBIDI_VERSION = version_string,
-                .FRIBIDI_MAJOR_VERSION = @as(i64, version.major),
-                .FRIBIDI_MINOR_VERSION = @as(i64, version.minor),
-                .FRIBIDI_MICRO_VERSION = @as(i64, version.patch),
-                .FRIBIDI_INTERFACE_VERSION = interface_version,
-
-                .SIZEOF_INT = target.cTypeByteSize(.int),
-
-                .FRIBIDI_MSVC_BUILD_PLACEHOLDER = "",
-            });
-            _ = generated.addCopyFile(version_h.getOutputFile(), version_h.include_path);
-
-            const unicode_version_h = b.addConfigHeader(.{
-                .style = .blank,
-                .include_path = "fribidi-unicode-version.h",
-            }, .{
-                .FRIBIDI_UNICODE_VERSION = unicode_version_string,
-                .FRIBIDI_UNICODE_MAJOR_VERSION = @as(i64, unicode_version.major),
-                .FRIBIDI_UNICODE_MINOR_VERSION = @as(i64, unicode_version.minor),
-                .FRIBIDI_UNICODE_MICRO_VERSION = @as(i64, unicode_version.patch),
-            });
-            _ = generated.addCopyFile(unicode_version_h.getOutputFile(), unicode_version_h.include_path);
-
-            lib.root_module.addIncludePath(fribidi.path("lib"));
-        }
-
-        // Provide upstream headers that don't require any special handling
-        lib.root_module.addIncludePath(b.dependency("egl", .{}).path("api"));
-        lib.root_module.addIncludePath(b.dependency("opengl", .{}).path("api"));
-        lib.root_module.addIncludePath(b.dependency("xkbcommon", .{}).path("include"));
-        lib.root_module.addIncludePath(b.dependency("xorgproto", .{}).path("include"));
-        lib.root_module.addIncludePath(b.dependency("xext", .{}).path("include"));
-        lib.root_module.addIncludePath(b.dependency("usb", .{}).path("libusb"));
-        lib.root_module.addIncludePath(b.dependency("xi", .{}).path("include"));
-        lib.root_module.addIncludePath(b.dependency("xfixes", .{}).path("include"));
-        lib.root_module.addIncludePath(b.dependency("xrandr", .{}).path("include"));
-        lib.root_module.addIncludePath(b.dependency("xrender", .{}).path("include"));
-        lib.root_module.addIncludePath(b.dependency("xscrnsaver", .{}).path("include"));
-        lib.root_module.addIncludePath(b.dependency("jack", .{}).path("common"));
-        lib.root_module.addIncludePath(b.dependency("sndio", .{}).path("libsndio"));
         lib.root_module.addIncludePath(b.path("deps/wayland/protocols"));
-        lib.root_module.addIncludePath(b.dependency("decor", .{}).path("src"));
-        lib.root_module.addIncludePath(b.path("deps/mesa/include"));
-        lib.root_module.addIncludePath(b.dependency("thai", .{}).path("include"));
-
-        // Provide vendored headers that don't require any special handling
-        lib.root_module.addIncludePath(b.path("deps/xcb/include"));
-        lib.root_module.addIncludePath(b.path("deps/udev/include"));
     }
 
     // Add the platform specific SDL sources
@@ -534,10 +72,10 @@ pub fn build(
     //
     // Dynamic library versions are from Steam Linux Runtime 3.0 Sniper unless otherwise noted:
     // https://gitlab.steamos.cloud/steamrt/steamrt/-/tree/steamrt/sniper
-    const libdecor_version_string = build_zon.dependencies.decor.version;
-    const libdecor_version = comptime std.SemanticVersion.parse(libdecor_version_string) catch unreachable;
-    const xkbcommon_version_string = build_zon.dependencies.xkbcommon.version;
-    const xkbcommon_version = comptime std.SemanticVersion.parse(xkbcommon_version_string) catch unreachable;
+    //
+    // SDL gates some API use on these, so like SDL's CMake we take them from the sysroot's pkg-config.
+    const libdecor_version = pkgConfigVersion(b, library, "libdecor-0", .{ .major = 0, .minor = 1, .patch = 0 });
+    const xkbcommon_version = pkgConfigVersion(b, library, "xkbcommon", .{ .major = 0, .minor = 5, .patch = 0 });
     const have_sigtimedwait: i64 = if (target.os.tag == .openbsd) 0 else 1;
     build_config_h.addValues(.{
         .HAVE_GCC_ATOMICS = 1,
@@ -830,14 +368,14 @@ pub fn build(
         .SDL_USE_IME = 1,
 
         // Set the xkbcommon version
-        .SDL_XKBCOMMON_VERSION_MAJOR = @as(i64, xkbcommon_version.major),
-        .SDL_XKBCOMMON_VERSION_MINOR = @as(i64, xkbcommon_version.minor),
-        .SDL_XKBCOMMON_VERSION_PATCH = @as(i64, xkbcommon_version.patch),
+        .SDL_XKBCOMMON_VERSION_MAJOR = @as(i64, @intCast(xkbcommon_version.major)),
+        .SDL_XKBCOMMON_VERSION_MINOR = @as(i64, @intCast(xkbcommon_version.minor)),
+        .SDL_XKBCOMMON_VERSION_PATCH = @as(i64, @intCast(xkbcommon_version.patch)),
 
         // Set the libdecor version
-        .SDL_LIBDECOR_VERSION_MAJOR = @as(i64, libdecor_version.major),
-        .SDL_LIBDECOR_VERSION_MINOR = @as(i64, libdecor_version.minor),
-        .SDL_LIBDECOR_VERSION_PATCH = @as(i64, libdecor_version.patch),
+        .SDL_LIBDECOR_VERSION_MAJOR = @as(i64, @intCast(libdecor_version.major)),
+        .SDL_LIBDECOR_VERSION_MINOR = @as(i64, @intCast(libdecor_version.minor)),
+        .SDL_LIBDECOR_VERSION_PATCH = @as(i64, @intCast(libdecor_version.patch)),
 
         // Unused
         .SDL_EMSCRIPTEN_PERSISTENT_PATH_STRING = "",
@@ -880,6 +418,23 @@ pub fn addWaylandScannerStep(b: *std.Build) void {
             source_name,
         }));
     }
+}
+
+/// Reads `Version:` from `<library>/pkgconfig/<name>.pc`, falling back to SDL's lowest supported.
+fn pkgConfigVersion(b: *std.Build, library: std.Build.LazyPath, name: []const u8, fallback: std.SemanticVersion) std.SemanticVersion {
+    const pc_path = library.path(b, b.fmt("pkgconfig/{s}.pc", .{name})).getPath(b);
+    const pc = std.Io.Dir.cwd().readFileAlloc(b.graph.io, pc_path, b.allocator, .limited(64 * 1024)) catch {
+        std.log.warn("{s} not found, assuming {s} {f}", .{ pc_path, name, fallback });
+        return fallback;
+    };
+    var lines = std.mem.tokenizeScalar(u8, pc, '\n');
+    while (lines.next()) |line| {
+        if (!std.mem.startsWith(u8, line, "Version:")) continue;
+        const version = std.mem.trim(u8, line["Version:".len..], " \t\r");
+        return std.SemanticVersion.parse(version) catch break;
+    }
+    std.log.warn("no version in {s}, assuming {s} {f}", .{ pc_path, name, fallback });
+    return fallback;
 }
 
 fn formatDynamic(comptime name: []const u8) []const u8 {

@@ -15,10 +15,6 @@ pub fn build(
 
     const upstream = b.dependency("sdl", .{});
 
-    // Add the platform specific dependency include paths
-    lib.root_module.addIncludePath(b.dependency("egl", .{}).path("api"));
-    lib.root_module.addIncludePath(b.dependency("opengl", .{}).path("api"));
-
     // Link with the platform specific system libraries
     lib.root_module.linkSystemLibrary("advapi32", .{});
     lib.root_module.linkSystemLibrary("gdi32", .{});

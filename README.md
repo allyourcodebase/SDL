@@ -87,7 +87,7 @@ Not all of these dependencies in this example are required. Since both X11 and W
 # Target Configuration
 
 This library provides a default configuration for common targets:
-* [x] Linux (including Steam Deck)
+* [x] Linux (including Steam Deck), see [Linux](#linux)
   * [x] Steam Deck
 * [x] Windows
 * [x] macOS (no cross compilation due to Apple licensing)
@@ -95,6 +95,22 @@ This library provides a default configuration for common targets:
 * [x] Android (pass `-Dinclude_path=<ndk>/toolchains/llvm/prebuilt/<host>/sysroot/usr/include`)
 * [ ] [Emscripten (help wanted!)](https://github.com/allyourcodebase/SDL/issues/5)
 * [ ] [Consoles (help wanted!)](https://github.com/allyourcodebase/SDL/issues/6)
+
+## Linux
+
+SDL `dlopen`s its Linux dependencies at runtime, but needs their headers at build time. These come from your system (native builds) or from a sysroot for the target (cross builds); none are bundled. On Debian/Ubuntu:
+
+```sh
+sudo apt-get install libx11-dev libxext-dev libxcursor-dev libxi-dev libxfixes-dev libxrandr-dev libxrender-dev libxss-dev libxtst-dev libxcb1-dev libxkbcommon-dev libwayland-dev libdecor-0-dev libegl-dev libgl-dev libgles-dev libgbm-dev libdrm-dev libdbus-1-dev libibus-1.0-dev libglib2.0-dev libpipewire-0.3-dev libpulse-dev libjack-jackd2-dev libsndio-dev libasound2-dev libusb-1.0-0-dev libudev-dev liburing-dev libfribidi-dev libthai-dev
+```
+
+To cross compile, point the build at a sysroot with those packages installed:
+
+```sh
+zig build -Dtarget=x86_64-linux-gnu -Dinclude_path=$SYSROOT/usr/include -Dlibrary_path=$SYSROOT/usr/lib/x86_64-linux-gnu
+```
+
+`library_path` is only read for the arch specific `glibconfig.h`/`dbus-arch-deps.h` and the `xkbcommon`/`libdecor-0` pkg-config versions, nothing is linked.
 
 You can override the default target configuration by setting `default_target_config` to `false`, and then providing your own configuration. This is typically only necessary when your platform doesn't yet have a default configuration:
 ```zig
@@ -113,7 +129,7 @@ If you're interested in adding default configuration for additional targets, lis
 
 When making a PR that adds support for a new target:
 * Replicate the [default SDL configuration for the target](https://github.com/libsdl-org/SDL/tree/main/include/build_config) within reason
-* Pull dependencies in via the build system rather than vendoring them when possible. If this isn't possible, vendor the needed files in `/deps` with a README explaining why they couldn't be pulled in via the build system and any relevant licensing information.
+* Take third party headers from the target's system/sysroot (`-Dinclude_path`, `-Dlibrary_path`) rather than bundling them.
 * Cross compilation to all targets should be possible within reason unless forbidden by licensing.
 * Update [.github/workflows/ci.yaml](.github/workflows/ci.yaml) to test the new target.
 
@@ -128,4 +144,4 @@ When making a PR that adds support for a new target:
 
 ## SDL's Dependencies
 
-This should rarely be necessary. When it is, you can update their version in `build.zig.zon` if present, and any relevant files in `/deps` if present.
+Nothing to update, they come from the system or sysroot. The only generated files are the Wayland protocols in `deps/wayland`, see above.

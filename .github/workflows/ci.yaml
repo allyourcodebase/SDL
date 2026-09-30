@@ -40,7 +40,12 @@ jobs:
         run: zig build example -Dtarget=x86_64-windows-gnu --summary all
 
       - name: Build for Linux
-        run: zig build example -Dtarget=x86_64-linux-gnu --summary all
+        if: runner.os == 'Linux'
+        # Headers come from the system, see "Linux" in the README
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libx11-dev libxext-dev libxcursor-dev libxi-dev libxfixes-dev libxrandr-dev libxrender-dev libxss-dev libxtst-dev libxcb1-dev libxkbcommon-dev libwayland-dev libdecor-0-dev libegl-dev libgl-dev libgles-dev libgbm-dev libdrm-dev libdbus-1-dev libibus-1.0-dev libglib2.0-dev libpipewire-0.3-dev libpulse-dev libjack-jackd2-dev libsndio-dev libasound2-dev libusb-1.0-0-dev libudev-dev liburing-dev libfribidi-dev libthai-dev
+          zig build example -Dtarget=x86_64-linux-gnu --summary all
 
       - name: Build for macOS
         if: runner.os == 'macOS'
