@@ -13,84 +13,93 @@
             .version = "1.16.2",
             .url = "https://gitlab.freedesktop.org/dbus/dbus/-/archive/dbus-1.16.2/dbus-dbus-1.16.2.tar.gz",
             .hash = "N-V-__8AALxqaQCXLK7KmtlbRHzj5quTSajWtJZ86Qy7aBxj",
+            .lazy = true,
         },
         .x11 = .{
             .url = "https://gitlab.freedesktop.org/xorg/lib/libx11/-/archive/libX11-1.8.13/libx11-libX11-1.8.13.tar.gz",
             .hash = "N-V-__8AANL5xACqderCBKpnIFKe282dZAikvyc--kNSKWgd",
-        },
-        .egl = .{
-            .url = "https://github.com/KhronosGroup/EGL-Registry/archive/3d7796b3721d93976b6bfe536aa97bbc4bce8667.tar.gz",
-            .hash = "N-V-__8AAItrbQBen6_Wl2eZ2ax6B0G6qtKys7_uVz224o99",
+            .lazy = true,
         },
         .wayland = .{
             .version = "1.26.0",
             .url = "git+https://gitlab.freedesktop.org/wayland/wayland?ref=1.26.0#87cc8a8728a923fc57938faa81ba0e74f34ecdc7",
             .hash = "N-V-__8AAA46JQABKU7sa-6xGUAN44uFsYSUS_w79UVuu7qo",
+            .lazy = true,
         },
         .xkbcommon = .{
             .version = "1.13.2",
             .url = "https://github.com/xkbcommon/libxkbcommon/archive/refs/tags/xkbcommon-1.13.2.tar.gz",
             .hash = "N-V-__8AAGh7bAAD9LH6Hh6HB6br9SDZmRBbRu-_1NNpQ4GL",
+            .lazy = true,
         },
         .xorgproto = .{
             .url = "https://gitlab.freedesktop.org/xorg/proto/xorgproto/-/archive/xorgproto-2025.1/xorgproto-xorgproto-2025.1.tar.gz",
             .hash = "N-V-__8AAG86ZgA2-SHGTO4n81-Sj8LNvSASCKZ91wOWZ7Sg",
+            .lazy = true,
         },
         .xext = .{
             .url = "https://gitlab.freedesktop.org/xorg/lib/libxext/-/archive/libXext-1.3.7/libxext-libXext-1.3.7.tar.gz",
             .hash = "N-V-__8AAHTdBwAEWsgYzKEVP-WmGT0wYKIJjBtqH1No6y73",
+            .lazy = true,
         },
         .xcb = .{
             .url = "https://gitlab.freedesktop.org/xorg/lib/libxcb/-/archive/libxcb-1.17.0/libxcb-libxcb-1.17.0.tar.gz",
             .hash = "N-V-__8AAPZxCQD7JyQLx0_D9J9dnkSoP7iziBVxreTgUqlj",
+            .lazy = true,
         },
         .ibus = .{
             .url = "https://github.com/ibus/ibus/releases/download/1.5.34/ibus-1.5.34.tar.gz",
             .hash = "N-V-__8AANTkvAHAAXsApyhePM0ufoLcIQxEGXVB6Q7n7grW",
+            .lazy = true,
         },
         .usb = .{
             .url = "https://github.com/libusb/libusb/archive/refs/tags/v1.0.30.zip",
             .hash = "N-V-__8AAP6YHABRm4muBuwd_qlKgvsenaOLg962zfsjQr8B",
+            .lazy = true,
         },
         .xcursor = .{
             .version = "1.2.3",
             .url = "https://gitlab.freedesktop.org/xorg/lib/libxcursor/-/archive/libXcursor-1.2.3/libxcursor-libXcursor-1.2.3.tar.gz",
             .hash = "N-V-__8AAKtlAgAAqwksheZkCSajEEPpi2XivNet-_3hZyz2",
+            .lazy = true,
         },
         .xi = .{
             .url = "https://gitlab.freedesktop.org/xorg/lib/libxi/-/archive/libXi-1.8.3/libxi-libXi-1.8.3.tar.gz",
             .hash = "N-V-__8AAPR0DQAuD3_ZopKbezyogf0SLNe6GiYF3RlaaNrh",
+            .lazy = true,
         },
         .xfixes = .{
             .url = "https://gitlab.freedesktop.org/xorg/lib/libxfixes/-/archive/libXfixes-6.0.2/libxfixes-libXfixes-6.0.2.tar.gz",
             .hash = "N-V-__8AAFIgAQCJSug37AGy4zypGtiDtUR9wtQa8U74Nm0a",
+            .lazy = true,
         },
         .xrandr = .{
             .url = "https://gitlab.freedesktop.org/xorg/lib/libxrandr/-/archive/libXrandr-1.5.5/libxrandr-libXrandr-1.5.5.tar.gz",
             .hash = "N-V-__8AAGlRAgBdkf1F-Y410qIz6cV4C62ZAUk_SGeUVriw",
+            .lazy = true,
         },
         .xrender = .{
             .url = "https://gitlab.freedesktop.org/xorg/lib/libxrender/-/archive/libXrender-0.9.12/libxrender-libXrender-0.9.12.tar.gz",
             .hash = "N-V-__8AANorBADbt-RlITZJofNvQWTiaQlv7r7lWYtxAqGx",
+            .lazy = true,
         },
         .decor = .{
             .url = "https://gitlab.freedesktop.org/libdecor/libdecor/-/archive/0.2.5/libdecor-0.2.5.tar.gz",
             .hash = "N-V-__8AADG6BADZ6vLbOD3OrWhDYa5jrubmgY-ljspuv-4R",
+            .lazy = true,
             .version = "0.2.5",
-        },
-        .opengl = .{
-            .url = "https://github.com/KhronosGroup/OpenGL-Registry/archive/e8f7cd0e35ac8d6f5667a021ff83d04b1fec41ef.tar.gz",
-            .hash = "N-V-__8AADsI5wqNqQMgAmqSba8PUrQcWdd3Svxc8GoX8SgY",
         },
         .pipewire = .{
             .url = "https://gitlab.freedesktop.org/pipewire/pipewire/-/archive/1.6.8/pipewire-1.6.8.tar.gz",
             .hash = "N-V-__8AAEBm3gCliUlb1HgAJA-3XvTWKC2YfRa5hJMiaEld",
+            .lazy = true,
             .version = "1.6.8",
             .api_version = "0.3", // From `meson.build`, does not directly track `version`!
         },
         .jack = .{
             .url = "https://github.com/jackaudio/jack2/archive/refs/tags/jack2-control-api-relicense-nedko.tar.gz",
             .hash = "N-V-__8AANOERwAn9QBxYJf43h9P3jq2HYTPvXlZRCHPEmrj",
+            .lazy = true,
         },
         .pulseaudio = .{
             // This dependency must be kept in sync with `pulseaudio_windows`.
@@ -117,14 +126,17 @@
             // This dependency must be kept in sync with `xscrnsaver_windows` for similar reasons explained in the `pulseaudio` dependency.
             .url = "https://gitlab.freedesktop.org/xorg/lib/libxscrnsaver/-/archive/libXScrnSaver-1.2.5/libxscrnsaver-libXScrnSaver-1.2.5.tar.gz",
             .hash = "N-V-__8AAMXRAADYeHz48Y1IuZUzOOqRvOO7f0wrdeNkWcBF",
+            .lazy = true,
         },
         .alsa = .{
             .url = "https://github.com/alsa-project/alsa-lib/archive/refs/tags/v1.2.16.1.tar.gz",
             .hash = "N-V-__8AACQ2RADoahGXBHOr7fJYspVVN8sMHwQn2C-kzECe",
+            .lazy = true,
         },
         .sndio = .{
             .url = "https://sndio.org/sndio-1.10.0.tar.gz",
             .hash = "N-V-__8AAKA0CgB5SuKmufbOKBnZsjDFZuUTNO70MHQEf1p8",
+            .lazy = true,
         },
         .fribidi = .{
             .version = "1.0.16",
@@ -132,10 +144,12 @@
             .unicode_version = "16.0.0",
             .url = "https://github.com/fribidi/fribidi/archive/refs/tags/v1.0.16.tar.gz",
             .hash = "N-V-__8AABbxDAFJr4_dchs33gEqLRpBMP2oUBTuIueW9u_h",
+            .lazy = true,
         },
         .thai = .{
             .url = "https://github.com/tlwg/libthai/archive/refs/tags/v0.1.30.tar.gz",
             .hash = "N-V-__8AAAqMIgArahV5mT0LGKWmDhZC9QtlMIZlaT9yp_lP",
+            .lazy = true,
         },
     },
     .paths = .{
