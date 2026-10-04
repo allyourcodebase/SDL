@@ -76,9 +76,6 @@ pub fn build(
         // C library functions
         .HAVE_DLOPEN = 1,
         .HAVE_MALLOC = 1,
-        .HAVE_CALLOC = 1,
-        .HAVE_REALLOC = 1,
-        .HAVE_FREE = 1,
         .HAVE_GETENV = 1,
         .HAVE_SETENV = 1,
         .HAVE_PUTENV = 1,
@@ -172,9 +169,7 @@ pub fn build(
         .HAVE_SYSCONF = 1,
         .HAVE_CLOCK_GETTIME = 1,
         .HAVE_GETPAGESIZE = 1,
-        .HAVE_MPROTECT = 1,
         .HAVE_PTHREAD_SETNAME_NP = 1,
-        .HAVE_SYSCTL = 1,
         .HAVE_SYSCTLBYNAME = 1,
         .HAVE_O_CLOEXEC = 1,
 
