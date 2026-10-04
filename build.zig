@@ -172,3 +172,16 @@ pub fn build(b: *std.Build) !void {
     const run_step = b.step("run-example", "Run the example app");
     run_step.dependOn(&run_example.step);
 }
+
+/// Platform dependencies are lazy so only the ones the target needs get fetched. Passing
+/// `-fsys=<name>` skips the fetch and uses the headers from the system/sysroot instead. Returns
+/// null in either case, or while the dependency is still being fetched.
+pub fn lazyDep(b: *std.Build, name: []const u8) ?*std.Build.Dependency {
+    if (b.systemIntegrationOption(name, .{})) return null;
+    return b.lazyDependency(name, .{});
+}
+
+pub fn addDepInclude(lib: *std.Build.Step.Compile, name: []const u8, sub_path: []const u8) void {
+    const b = lib.step.owner;
+    if (lazyDep(b, name)) |dep| lib.root_module.addIncludePath(dep.path(sub_path));
+}
