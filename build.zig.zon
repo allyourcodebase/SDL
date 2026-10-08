@@ -8,11 +8,6 @@
             .url = "https://github.com/libsdl-org/SDL/archive/refs/tags/release-3.4.16.tar.gz",
             .hash = "N-V-__8AABHq9wIiTHGY4qR6mw45F_TX8FSvqsQQ-Wtq1tzY",
             .version = "3.4.16",
-            // This is the same as the SDL version, but the major version is elided since it's baked
-            // into the name. This mirrors the official build process. Additionally, it must be an
-            // actual semantic version, it cannot for example include "x" which is used for release
-            // candidates.
-            .so_version = "0.4.16",
         },
         .dbus = .{
             .version = "1.16.2",
