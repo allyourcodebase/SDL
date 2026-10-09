@@ -37,6 +37,8 @@ jobs:
         run: zig fmt --ast-check --check .
 
       - name: Build for Windows
+        # See issue #40
+        if: matrix.zig-version != 'master'
         run: zig build example -Dtarget=x86_64-windows-gnu --summary all
 
       - name: Build for Linux
