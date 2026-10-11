@@ -69,7 +69,7 @@ For this to work, the libraries SDL is looking for need to be on your `LD_LIBRAR
 not be the case by default on distributions like NixOS.
 
 Here's a `shell.nix` for a Vulkan app as an example of running an SDL application on NixOS with
-either X11 or Wayland.
+either X11 or Wayland. You can enter it with `nix-shell shell.nix`.
 
 ```
 { pkgs ? import <nixpkgs> {}}:
@@ -85,9 +85,9 @@ pkgs.mkShell {
     libxkbcommon
     vulkan-loader
     wayland
-    xorg.libX11
-    xorg.libXext
-    xorg.libXi
+    libX11
+    libXext
+    libXi
     udev
   ]);
 }
@@ -95,6 +95,12 @@ pkgs.mkShell {
 
 Not all of these dependencies in this example are required. Since both X11 and Wayland dependencies
 are listed, SDL will use its judgement to decide which to prefer unless `SDL_VIDEODRIVER` is set.
+
+# System Integration
+
+All dependencies are provided via the build system where possible. If you prefer to get dependencies
+from your system, you can override this behavior for individual dependencies with `-fsys` or for all
+dependencies with `--system`. See `zig build --help` for more info, also note `--search-prefix`.
 
 # Target Configuration
 
