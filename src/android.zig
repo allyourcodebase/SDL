@@ -9,6 +9,8 @@ pub fn build(
     build_config_h: *std.Build.Step.ConfigHeader,
     paths: root.SystemPaths,
 ) void {
+    const sdl = b.dependency("sdl", .{});
+
     // NDK headers are not bundled with Zig; bionic's arch-specific headers (e.g. `jni.h`
     // adjacent files, `<triple>/asm/...`) live in a per-triple subdirectory of usr/include.
     const include_path = root.SystemPaths.print_missing_system_path_option(
@@ -37,13 +39,13 @@ pub fn build(
         // The core/video/audio/sensor/camera Android sources live in the generic group that
         // build.zig already compiles for every target; listing them here too duplicates them.
         .files = &(sources.android ++ sources.pthread),
-        .root = b.dependency("sdl", .{}).path("src"),
+        .root = sdl.path("src"),
         .flags = root.flags,
     });
     // SDL_android.c registers HIDDeviceManager_tab, which only hid.cpp defines; with
     // SDL_HIDAPI_DISABLED it compiles to JNI stubs that use no C++ stdlib.
     lib.root_module.addCSourceFile(.{
-        .file = b.dependency("sdl", .{}).path("src/hidapi/android/hid.cpp"),
+        .file = sdl.path("src/hidapi/android/hid.cpp"),
         .flags = &(root.flags.* ++ [_][]const u8{ "-fno-exceptions", "-fno-rtti" }),
     });
 

@@ -9,6 +9,7 @@
             .hash = "N-V-__8AACpx-AKEJIUZ0-XrP9-96MpSaw17FJ7L6B7LmO42",
             .version = "3.4.18",
         },
+        // Linux dependencies
         .dbus = .{
             .version = "1.16.2",
             .url = "https://gitlab.freedesktop.org/dbus/dbus/-/archive/dbus-1.16.2/dbus-dbus-1.16.2.tar.gz",
