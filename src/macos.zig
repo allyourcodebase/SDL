@@ -15,10 +15,6 @@ pub fn build(
 
     const upstream = b.dependency("sdl", .{});
 
-    // Add the platform specific dependency include paths
-    lib.root_module.addIncludePath(b.dependency("egl", .{}).path("api"));
-    lib.root_module.addIncludePath(b.dependency("opengl", .{}).path("api"));
-
     // Link with the platform specific system frameworks
     lib.root_module.linkFramework("Cocoa", .{});
     lib.root_module.linkFramework("IOKit", .{});

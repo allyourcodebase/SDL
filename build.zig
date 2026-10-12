@@ -172,3 +172,40 @@ pub fn build(b: *std.Build) !void {
     const run_step = b.step("run-example", "Run the example app");
     run_step.dependOn(&run_example.step);
 }
+
+/// Prefetches a list of dependencies, where each dependency has a name field and an args field. If
+/// any dependencies are not yet fetched, returns `error.LazyDependencyNeeded`. Saves us from
+/// repeatedly earlying out every time a new lazy dependency is needed.
+pub fn prefetch(b: *std.Build, comptime deps: anytype) error{LazyDependencyNeeded}!void {
+    var lazy_deps_needed = false;
+    inline for (deps) |dep| {
+        if (!b.systemIntegrationOption(dep.name, .{})) {
+            if (b.lazyDependency(dep.name, dep.args) == null) {
+                lazy_deps_needed = true;
+            }
+        }
+    }
+    if (lazy_deps_needed) {
+        return error.LazyDependencyNeeded;
+    }
+}
+
+/// Similar to `std.Build.lazyDependency`, but returns `null` if provided by the system with
+/// `-fsys`, and otherwise assserts that the dependency was already prefetched (e.g. with
+/// `prefetch`.)
+pub fn lazyDependency(b: *std.Build, name: []const u8) ?*std.Build.Dependency {
+    if (b.systemIntegrationOption(name, .{})) return null;
+    return b.lazyDependency(name, .{}) orelse std.debug.panic("{s} not prefetched", .{name});
+}
+
+/// Adds an include path via `lazyDependency`, unless provided via `-fsys`.
+pub fn addDepIncludePath(
+    b: *std.Build,
+    lib: *std.Build.Step.Compile,
+    name: []const u8,
+    sub_path: []const u8,
+) void {
+    if (lazyDependency(b, name)) |dep| {
+        lib.root_module.addIncludePath(dep.path(sub_path));
+    }
+}

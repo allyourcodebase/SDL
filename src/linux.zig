@@ -11,6 +11,39 @@ pub fn build(
     lib: *std.Build.Step.Compile,
     build_config_h: *std.Build.Step.ConfigHeader,
 ) void {
+    // Workaround for cross compilation, see comment in `build.zig.zon`
+    const pulseaudio_name = switch (@import("builtin").os.tag) {
+        .windows => "pulseaudio_windows",
+        else => "pulseaudio",
+    };
+
+    root.prefetch(b, .{
+        .{ .name = "dbus", .args = .{} },
+        .{ .name = "x11", .args = .{} },
+        .{ .name = "xcursor", .args = .{} },
+        .{ .name = "pipewire", .args = .{} },
+        .{ .name = pulseaudio_name, .args = .{} },
+        .{ .name = "wayland", .args = .{} },
+        .{ .name = "alsa", .args = .{} },
+        .{ .name = "fribidi", .args = .{} },
+        .{ .name = "ibus", .args = .{} },
+        .{ .name = "xkbcommon", .args = .{} },
+        .{ .name = "xorgproto", .args = .{} },
+        .{ .name = "xext", .args = .{} },
+        .{ .name = "usb", .args = .{} },
+        .{ .name = "xi", .args = .{} },
+        .{ .name = "xfixes", .args = .{} },
+        .{ .name = "xrandr", .args = .{} },
+        .{ .name = "xrender", .args = .{} },
+        .{ .name = "xscrnsaver", .args = .{} },
+        .{ .name = "jack", .args = .{} },
+        .{ .name = "sndio", .args = .{} },
+        .{ .name = "decor", .args = .{} },
+        .{ .name = "thai", .args = .{} },
+    }) catch |err| switch (err) {
+        error.LazyDependencyNeeded => return,
+    };
+
     const upstream = b.dependency("sdl", .{});
 
     // Provide the platform specific dependency include paths
@@ -20,8 +53,7 @@ pub fn build(
         lib.root_module.addIncludePath(generated.getDirectory());
 
         // Provide the D-Bus headers
-        {
-            const dbus = b.dependency("dbus", .{});
+        if (root.lazyDependency(b, "dbus")) |dbus| {
             lib.root_module.addIncludePath(dbus.path("."));
 
             const version_string = build_zon.dependencies.dbus.version;
@@ -106,7 +138,7 @@ pub fn build(
         // Provide the IBus headers
         {
             // The headers are here
-            lib.root_module.addIncludePath(b.dependency("ibus", .{}).path("src"));
+            root.addDepIncludePath(b, lib, "ibus", "src");
 
             // They depend on the GLib headers, which require some configuration
             lib.root_module.addIncludePath(b.path("deps/glib/upstream/include"));
@@ -289,9 +321,7 @@ pub fn build(
 
         // Provide the X11 headers
         {
-            {
-                const x11 = b.dependency("x11", .{});
-
+            if (root.lazyDependency(b, "x11")) |x11| {
                 lib.root_module.addIncludePath(x11.path("include"));
 
                 const config = b.addConfigHeader(.{
@@ -305,8 +335,7 @@ pub fn build(
             }
 
             // Provide the Xcursor headers
-            {
-                const xcursor = b.dependency("xcursor", .{});
+            if (root.lazyDependency(b, "xcursor")) |xcursor| {
                 const version_string = build_zon.dependencies.xcursor.version;
                 const version = comptime std.SemanticVersion.parse(version_string) catch unreachable;
                 const config = b.addConfigHeader(.{
@@ -352,8 +381,7 @@ pub fn build(
         }
 
         // Provide the pipewire headers
-        {
-            const pipewire = b.dependency("pipewire", .{});
+        if (root.lazyDependency(b, "pipewire")) |pipewire| {
             lib.root_module.addIncludePath(pipewire.path("spa/include"));
             lib.root_module.addIncludePath(pipewire.path("src"));
             const version_string = build_zon.dependencies.pipewire.version;
@@ -374,12 +402,7 @@ pub fn build(
         // Provide the pulseaudio headers
         {
             @setEvalBranchQuota(2000);
-            // Workaround for cross compilation, see comment in `build.zig.zon`
-            const pulseaudio_name = switch (@import("builtin").os.tag) {
-                .windows => "pulseaudio_windows",
-                else => "pulseaudio",
-            };
-            if (b.lazyDependency(pulseaudio_name, .{})) |pulseaudio| {
+            if (root.lazyDependency(b, pulseaudio_name)) |pulseaudio| {
                 lib.root_module.addIncludePath(pulseaudio.path("src"));
                 const version_string = build_zon.dependencies.pulseaudio.version;
                 const version = comptime std.SemanticVersion.parse(version_string) catch unreachable;
@@ -401,8 +424,7 @@ pub fn build(
         }
 
         // Provide the Wayland headers
-        {
-            const wayland = b.dependency("wayland", .{});
+        if (root.lazyDependency(b, "wayland")) |wayland| {
             lib.root_module.addIncludePath(wayland.path("src"));
             lib.root_module.addIncludePath(wayland.path("cursor"));
             lib.root_module.addIncludePath(wayland.path("egl"));
@@ -430,8 +452,7 @@ pub fn build(
         }
 
         // Provide the Alsa headers
-        {
-            const alsa = b.dependency("alsa", .{});
+        if (root.lazyDependency(b, "alsa")) |alsa| {
             _ = generated.addCopyDirectory(alsa.path("include"), "alsa", .{
                 .include_extensions = &.{".h"},
             });
@@ -440,8 +461,7 @@ pub fn build(
         }
 
         // Provide the Fribidi headers
-        {
-            const fribidi = b.dependency("fribidi", .{});
+        if (root.lazyDependency(b, "fribidi")) |fribidi| {
             const interface_version = build_zon.dependencies.fribidi.interface_version;
             const version_string = build_zon.dependencies.fribidi.version;
             const version = comptime std.SemanticVersion.parse(version_string) catch unreachable;
@@ -487,23 +507,21 @@ pub fn build(
         }
 
         // Provide upstream headers that don't require any special handling
-        lib.root_module.addIncludePath(b.dependency("egl", .{}).path("api"));
-        lib.root_module.addIncludePath(b.dependency("opengl", .{}).path("api"));
-        lib.root_module.addIncludePath(b.dependency("xkbcommon", .{}).path("include"));
-        lib.root_module.addIncludePath(b.dependency("xorgproto", .{}).path("include"));
-        lib.root_module.addIncludePath(b.dependency("xext", .{}).path("include"));
-        lib.root_module.addIncludePath(b.dependency("usb", .{}).path("libusb"));
-        lib.root_module.addIncludePath(b.dependency("xi", .{}).path("include"));
-        lib.root_module.addIncludePath(b.dependency("xfixes", .{}).path("include"));
-        lib.root_module.addIncludePath(b.dependency("xrandr", .{}).path("include"));
-        lib.root_module.addIncludePath(b.dependency("xrender", .{}).path("include"));
-        lib.root_module.addIncludePath(b.dependency("xscrnsaver", .{}).path("include"));
-        lib.root_module.addIncludePath(b.dependency("jack", .{}).path("common"));
-        lib.root_module.addIncludePath(b.dependency("sndio", .{}).path("libsndio"));
+        root.addDepIncludePath(b, lib, "xkbcommon", "include");
+        root.addDepIncludePath(b, lib, "xorgproto", "include");
+        root.addDepIncludePath(b, lib, "xext", "include");
+        root.addDepIncludePath(b, lib, "usb", "libusb");
+        root.addDepIncludePath(b, lib, "xi", "include");
+        root.addDepIncludePath(b, lib, "xfixes", "include");
+        root.addDepIncludePath(b, lib, "xrandr", "include");
+        root.addDepIncludePath(b, lib, "xrender", "include");
+        root.addDepIncludePath(b, lib, "xscrnsaver", "include");
+        root.addDepIncludePath(b, lib, "jack", "common");
+        root.addDepIncludePath(b, lib, "sndio", "libsndio");
         lib.root_module.addIncludePath(b.path("deps/wayland/protocols"));
-        lib.root_module.addIncludePath(b.dependency("decor", .{}).path("src"));
+        root.addDepIncludePath(b, lib, "decor", "src");
         lib.root_module.addIncludePath(b.path("deps/mesa/include"));
-        lib.root_module.addIncludePath(b.dependency("thai", .{}).path("include"));
+        root.addDepIncludePath(b, lib, "thai", "include");
 
         // Provide vendored headers that don't require any special handling
         lib.root_module.addIncludePath(b.path("deps/xcb/include"));
