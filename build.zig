@@ -119,10 +119,10 @@ pub fn build(b: *std.Build) !void {
             // safe added.
             // https://wiki.libsdl.org/SDL3/SDL_ASSERT_LEVEL
             .SDL_DEFAULT_ASSERT_LEVEL_CONFIGURED = true,
-            .SDL_DEFAULT_ASSERT_LEVEL = switch (optimize) {
-                .Debug, .ReleaseSafe => @as(i64, 2),
-                .ReleaseSmall, .ReleaseFast => @as(i64, 1),
-            },
+            .SDL_DEFAULT_ASSERT_LEVEL = @as(u2, switch (optimize) {
+                .Debug, .ReleaseSafe => 2,
+                .ReleaseSmall, .ReleaseFast => 1,
+            }),
         });
         lib.root_module.addConfigHeader(build_config_h);
 
