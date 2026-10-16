@@ -4,6 +4,7 @@ const windows = @import("src/windows.zig");
 const macos = @import("src/macos.zig");
 const ios = @import("src/ios.zig");
 const android = @import("src/android.zig");
+const emscripten = @import("src/emscripten.zig");
 const build_zon = @import("build.zig.zon");
 
 const assert = std.debug.assert;
@@ -103,6 +104,15 @@ pub fn build(b: *std.Build) !void {
         .flags = flags,
     });
 
+    // Emscripten provides its own main callbacks implementation
+    if (target.result.os.tag != .emscripten) {
+        lib.root_module.addCSourceFiles(.{
+            .files = &sources.main_callbacks_generic,
+            .root = upstream.path("src"),
+            .flags = flags,
+        });
+    }
+
     if (default_target_config) {
         const build_config_h = b.addConfigHeader(.{
             .style = .{ .cmake = upstream.path("include/build_config/SDL_build_config.h.cmake") },
@@ -136,6 +146,7 @@ pub fn build(b: *std.Build) !void {
             .windows => windows.build(b, target.result, lib, build_config_h),
             .macos => macos.build(b, target.result, lib, build_config_h),
             .ios => ios.build(b, target.result, lib, build_config_h, system_paths),
+            .emscripten => emscripten.build(b, target.result, lib, build_config_h, system_paths),
             else => @panic("target has no default config"),
         }
     }
@@ -152,26 +163,61 @@ pub fn build(b: *std.Build) !void {
     translate_c.defineCMacro("USING_GENERATED_CONFIG_H", "1");
     translate_c.addIncludePath(upstream.path("include"));
     translate_c.addIncludePath(upstream.path("src/video/khronos"));
+    if (target.result.os.tag == .emscripten) {
+        // The SDL headers include libc headers, which Zig doesn't bundle for Emscripten
+        if (system_paths.include) |include_path| translate_c.addSystemIncludePath(include_path);
+    }
     const module = translate_c.addModule("sdl3");
     module.linkLibrary(lib);
 
     // Add the example
-    const example = b.addExecutable(.{
-        .name = "example",
-        .root_module = b.createModule(.{
-            .root_source_file = b.path("src/example.zig"),
-            .target = target,
-            .optimize = optimize,
-        }),
-    });
-    example.root_module.addImport("sdl3", module);
-
     const build_example_step = b.step("example", "Build the example app");
-    build_example_step.dependOn(&example.step);
-
-    const run_example = b.addRunArtifact(example);
     const run_step = b.step("run-example", "Run the example app");
-    run_step.dependOn(&run_example.step);
+    if (target.result.os.tag == .emscripten) {
+        // Zig can't link Emscripten executables, so build the example as a static library and
+        // link it with `emcc`, which also generates the JavaScript and HTML needed to run it.
+        const example = b.addLibrary(.{
+            .name = "example",
+            .root_module = b.createModule(.{
+                .root_source_file = b.path("src/example.zig"),
+                .target = target,
+                .optimize = optimize,
+                .link_libc = true,
+            }),
+        });
+        example.root_module.addImport("sdl3", module);
+
+        const emcc = b.addSystemCommand(&.{ "emcc", "-sALLOW_MEMORY_GROWTH" });
+        emcc.addArtifactArg(example);
+        emcc.addArtifactArg(lib);
+        const html = emcc.addPrefixedOutputFileArg("-o", "example.html");
+
+        // `emcc` writes the `.js` and `.wasm` files next to the `.html` file
+        const install_example = b.addInstallDirectory(.{
+            .source_dir = html.dirname(),
+            .install_dir = .prefix,
+            .install_subdir = "web",
+        });
+        build_example_step.dependOn(&install_example.step);
+
+        const run_example = b.addSystemCommand(&.{"emrun"});
+        run_example.addFileArg(html);
+        run_step.dependOn(&run_example.step);
+    } else {
+        const example = b.addExecutable(.{
+            .name = "example",
+            .root_module = b.createModule(.{
+                .root_source_file = b.path("src/example.zig"),
+                .target = target,
+                .optimize = optimize,
+            }),
+        });
+        example.root_module.addImport("sdl3", module);
+        build_example_step.dependOn(&example.step);
+
+        const run_example = b.addRunArtifact(example);
+        run_step.dependOn(&run_example.step);
+    }
 }
 
 /// Prefetches a list of dependencies, where each dependency has a name field and an args field. If
