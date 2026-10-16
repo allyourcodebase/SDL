@@ -52,6 +52,12 @@ pub fn build(b: *std.Build) !void {
         ,
     ) orelse .static;
 
+    // Upstream doesn't support building SDL as a shared library for Emscripten
+    if (target.result.os.tag == .emscripten and linkage == .dynamic) {
+        std.log.err("'-Dlinkage=dynamic' is not supported when building SDL for Emscripten", .{});
+        std.process.exit(1);
+    }
+
     // Cross-compiling to a target whose SDK isn't bundled with Zig (iOS, Android) needs the
     // SDK's headers/frameworks/libs passed in explicitly. Scoped to the SDL library only, unlike
     // `--sysroot` this does not re-roots paths across the whole build graph.
