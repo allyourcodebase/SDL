@@ -25,7 +25,7 @@ pub fn build(
     // Zig's UBSan runtime can't be built for Emscripten, and the final link is done by `emcc`
     // which doesn't provide it by default, so trap on undefined behavior instead of calling into a
     // runtime. Other optimize modes don't sanitize C code by default.
-    switch (lib.root_module.optimize orelse .Debug) {
+    switch (lib.root_module.optimize orelse std.builtin.OptimizeMode.Debug) {
         .Debug, .ReleaseSafe => lib.root_module.sanitize_c = .trap,
         .ReleaseFast, .ReleaseSmall => {},
     }
