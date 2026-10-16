@@ -33,8 +33,7 @@ pub fn build(b: *std.Build) !void {
     // Get the upstream source and build options
     const upstream = b.dependency("sdl", .{});
     const target = b.standardTargetOptions(.{});
-    // Coercing to an optional makes the value consistent across multiple versions of Zig.
-    // TODO: Remove explicit type annotation when Zig 0.18.0 is the minimum supported version.
+    // https://github.com/allyourcodebase/SDL/issues/42
     const optimize: ?std.builtin.OptimizeMode = b.standardOptimizeOption(.{});
 
     const default_target_config = b.option(
