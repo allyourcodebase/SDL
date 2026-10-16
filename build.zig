@@ -33,7 +33,8 @@ pub fn build(b: *std.Build) !void {
     // Get the upstream source and build options
     const upstream = b.dependency("sdl", .{});
     const target = b.standardTargetOptions(.{});
-    const optimize = b.standardOptimizeOption(.{});
+    // https://github.com/allyourcodebase/SDL/issues/42
+    const optimize: ?std.builtin.OptimizeMode = b.standardOptimizeOption(.{});
 
     const default_target_config = b.option(
         bool,
@@ -119,10 +120,10 @@ pub fn build(b: *std.Build) !void {
             // safe added.
             // https://wiki.libsdl.org/SDL3/SDL_ASSERT_LEVEL
             .SDL_DEFAULT_ASSERT_LEVEL_CONFIGURED = true,
-            .SDL_DEFAULT_ASSERT_LEVEL = switch (optimize) {
-                .Debug, .ReleaseSafe => @as(i64, 2),
-                .ReleaseSmall, .ReleaseFast => @as(i64, 1),
-            },
+            .SDL_DEFAULT_ASSERT_LEVEL = @as(u2, switch (optimize orelse std.builtin.OptimizeMode.Debug) {
+                .Debug, .ReleaseSafe => 2,
+                .ReleaseSmall, .ReleaseFast => 1,
+            }),
         });
         lib.root_module.addConfigHeader(build_config_h);
 
@@ -146,7 +147,7 @@ pub fn build(b: *std.Build) !void {
     const translate_c = b.addTranslateC(.{
         .root_source_file = b.path("src/sdl.h"),
         .target = target,
-        .optimize = optimize,
+        .optimize = optimize orelse std.builtin.OptimizeMode.Debug,
     });
     translate_c.defineCMacro("USING_GENERATED_CONFIG_H", "1");
     translate_c.addIncludePath(upstream.path("include"));
