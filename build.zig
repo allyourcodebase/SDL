@@ -460,6 +460,7 @@ const linux_src_files = [_][]const u8{
 
     "src/misc/unix/SDL_sysurl.c",
 
+    "src/thread/pthread/SDL_syscond.c",
     "src/thread/pthread/SDL_sysmutex.c",
     "src/thread/pthread/SDL_syssem.c",
     "src/thread/pthread/SDL_systhread.c",
