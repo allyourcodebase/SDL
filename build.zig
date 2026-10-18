@@ -226,39 +226,35 @@ pub fn build(b: *std.Build) !void {
     }
 }
 
-/// Prefetches a list of dependencies, where each dependency has a name field and an args field. If
-/// any dependencies are not yet fetched, returns `error.LazyDependencyNeeded`. Saves us from
-/// repeatedly earlying out every time a new lazy dependency is needed.
-pub fn prefetch(b: *std.Build, comptime deps: anytype) error{LazyDependencyNeeded}!void {
-    var lazy_deps_needed = false;
-    inline for (deps) |dep| {
-        if (!b.systemIntegrationOption(dep.name, .{})) {
-            if (b.lazyDependency(dep.name, dep.args) == null) {
-                lazy_deps_needed = true;
-            }
-        }
+/// Fetches a lazy dependency, unless provided via `-fsys`.
+///
+/// A more typical setup would still need to link to the library in the event that it's provided by
+/// `-fsys`, but we can just treat this as a noop as SDL doesn't link to its dependencies, it
+/// `dlopen`s them when available. We only pull them in for the headers.
+pub fn lazyDependency(
+    step: *std.Build.Step,
+    name: []const u8,
+    args: anytype,
+) ?*std.Build.Dependency {
+    // If we're using a system integration, return null as no work needs to be done. SDL will
+    // `dlopen` the library, if available, at runtime so we don't need to link it here.
+    if (step.owner.systemIntegrationOption(name, .{})) return null;
+    if (@hasDecl(std.Build, "dependencyStep")) {
+        return step.owner.dependencyStep(step, name, args);
+    } else {
+        // https://github.com/allyourcodebase/SDL/issues/44
+        return step.owner.lazyDependency(name, .{});
     }
-    if (lazy_deps_needed) {
-        return error.LazyDependencyNeeded;
-    }
-}
-
-/// Similar to `std.Build.lazyDependency`, but returns `null` if provided by the system with
-/// `-fsys`, and otherwise assserts that the dependency was already prefetched (e.g. with
-/// `prefetch`.)
-pub fn lazyDependency(b: *std.Build, name: []const u8) ?*std.Build.Dependency {
-    if (b.systemIntegrationOption(name, .{})) return null;
-    return b.lazyDependency(name, .{}) orelse std.debug.panic("{s} not prefetched", .{name});
 }
 
 /// Adds an include path via `lazyDependency`, unless provided via `-fsys`.
 pub fn addDepIncludePath(
-    b: *std.Build,
     lib: *std.Build.Step.Compile,
     name: []const u8,
     sub_path: []const u8,
+    args: anytype,
 ) void {
-    if (lazyDependency(b, name)) |dep| {
+    if (lazyDependency(&lib.step, name, args)) |dep| {
         lib.root_module.addIncludePath(dep.path(sub_path));
     }
 }
