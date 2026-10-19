@@ -9,6 +9,10 @@
             .hash = "N-V-__8AACpx-AKEJIUZ0-XrP9-96MpSaw17FJ7L6B7LmO42",
             .version = "3.4.18",
         },
+        .translate_c = .{
+            .url = "git+https://codeberg.org/ziglang/translate-c#576ec7307f5ecfad1f591573d232011af6fb1718",
+            .hash = "translate_c-0.0.0-Q_BUWsROBwCSS8IZPX4rJoPqRlwvHPoS_cYGaCvUhhqX",
+        },
         // Linux dependencies
         .dbus = .{
             .version = "1.16.2",
