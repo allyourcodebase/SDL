@@ -127,7 +127,7 @@ pub fn build(b: *std.Build) !void {
         main_lib.root_module.addCMacro("SDL_MAIN_USE_CALLBACKS", "1");
     }
     main_lib.root_module.addCSourceFile(.{ .file = b.path("src/sdl_main.c") });
-    addAppleSdkPathsToModule(b, target.result, main_lib.root_module);
+    addSystemPathsToModule(b, main_lib.root_module, system_paths);
     b.installArtifact(main_lib);
 
     if (default_target_config) {
@@ -179,7 +179,7 @@ pub fn build(b: *std.Build) !void {
     translate_c.defineCMacro("USING_GENERATED_CONFIG_H", "1");
     translate_c.addIncludePath(upstream.path("include"));
     translate_c.addIncludePath(upstream.path("src/video/khronos"));
-    addAppleSdkPathsToTranslateC(b, target.result, translate_c);
+    addSystemPathsToTranslateC(b, translate_c, system_paths);
     const module = translate_c.addModule("sdl3");
     module.linkLibrary(lib);
 
@@ -249,15 +249,21 @@ pub fn withAppleSdkFallback(b: *std.Build, target: std.Target, paths: SystemPath
     };
 }
 
-pub fn addAppleSdkPathsToTranslateC(b: *std.Build, target: std.Target, translate_c: *std.Build.Step.TranslateC) void {
-    if (!target.os.tag.isDarwin()) return;
+fn addSystemPathsToModule(b: *std.Build, module: *std.Build.Module, paths: SystemPaths) void {
+    if (paths.include) |p| module.addSystemIncludePath(p);
+    if (paths.framework) |p| {
+        module.addSystemFrameworkPath(p);
+        module.addSystemFrameworkPath(p.dirname().path(b, "SubFrameworks"));
+    }
+    if (paths.library) |p| module.addLibraryPath(p);
+}
 
-    const sdk = std.zig.system.darwin.getSdk(b.allocator, b.graph.io, &target) orelse
-        @panic("Couldn't detect Apple SDK");
-
-    translate_c.addIncludePath(.{ .cwd_relative = b.pathJoin(&.{ sdk, "usr/include" }) });
-    translate_c.addSystemFrameworkPath(.{ .cwd_relative = b.pathJoin(&.{ sdk, "System/Library/Frameworks" }) });
-    translate_c.addSystemFrameworkPath(.{ .cwd_relative = b.pathJoin(&.{ sdk, "System/Library/SubFrameworks" }) });
+fn addSystemPathsToTranslateC(b: *std.Build, translate_c: *std.Build.Step.TranslateC, paths: SystemPaths) void {
+    if (paths.include) |p| translate_c.addSystemIncludePath(p);
+    if (paths.framework) |p| {
+        translate_c.addSystemFrameworkPath(p);
+        translate_c.addSystemFrameworkPath(p.dirname().path(b, "SubFrameworks"));
+    }
 }
 
 pub fn addAppleSdkPathsToModule(b: *std.Build, target: std.Target, module: *std.Build.Module) void {
