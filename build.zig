@@ -3,8 +3,8 @@ const linux = @import("src/linux.zig");
 const windows = @import("src/windows.zig");
 const macos = @import("src/macos.zig");
 const ios = @import("src/ios.zig");
+const android = @import("src/android.zig");
 const build_zon = @import("build.zig.zon");
-const Translator = @import("translate_c").Translator;
 
 const assert = std.debug.assert;
 
@@ -16,11 +16,25 @@ pub const flags = &.{
     "-DUSING_GENERATED_CONFIG_H",
 };
 
+pub const SystemPaths = struct {
+    include: ?std.Build.LazyPath,
+    framework: ?std.Build.LazyPath,
+    library: ?std.Build.LazyPath,
+
+    pub fn print_missing_system_path_option(path: ?std.Build.LazyPath, comptime flag: []const u8, comptime platform: []const u8) std.Build.LazyPath {
+        return path orelse {
+            std.log.err("'-D" ++ flag ++ "' is required when building SDL for " ++ platform, .{});
+            std.process.exit(1);
+        };
+    }
+};
+
 pub fn build(b: *std.Build) !void {
     // Get the upstream source and build options
     const upstream = b.dependency("sdl", .{});
     const target = b.standardTargetOptions(.{});
-    const optimize = b.standardOptimizeOption(.{});
+    // https://github.com/allyourcodebase/SDL/issues/42
+    const optimize: ?std.builtin.OptimizeMode = b.standardOptimizeOption(.{});
 
     const default_target_config = b.option(
         bool,
@@ -44,6 +58,22 @@ pub fn build(b: *std.Build) !void {
 
     const can_san = target.result.os.tag != .ios;
 
+    // Cross-compiling to a target whose SDK isn't bundled with Zig (iOS, Android) needs the
+    // SDK's headers/frameworks/libs passed in explicitly. Scoped to the SDL library only, unlike
+    // `--sysroot` this does not re-roots paths across the whole build graph.
+    // On Apple, if paths are not passed explicitly then fall back to the SDK found via `xcrun`.
+    const system_paths = withAppleSdkFallback(b, target.result, .{
+        .include = b.option(std.Build.LazyPath, "include_path", "SDK include dir, e.g. $(xcrun --sdk iphoneos --show-sdk-path)/usr/include or <ndk sysroot>/usr/include"),
+        .framework = b.option(std.Build.LazyPath, "framework_path", "SDK framework dir, e.g. $(xcrun --sdk iphoneos --show-sdk-path)/System/Library/Frameworks"),
+        .library = b.option(std.Build.LazyPath, "library_path", "SDK library dir, e.g. $(xcrun --sdk iphoneos --show-sdk-path)/usr/lib"),
+    });
+
+    // Get the SO version. This is the same as the SDL version, but the major version is elided
+    // since it's baked into the name. This mirrors the official build process.
+    var sdl_so_version = comptime std.SemanticVersion.parse(build_zon.dependencies.sdl.version) catch unreachable;
+    assert(sdl_so_version.major == 3);
+    sdl_so_version.major = 0;
+
     // Create the library
     const lib = b.addLibrary(.{
         .name = "SDL3",
@@ -54,7 +84,7 @@ pub fn build(b: *std.Build) !void {
             .sanitize_c = if (can_san) null else .off,
         }),
         .linkage = linkage,
-        .version = comptime std.SemanticVersion.parse(build_zon.dependencies.sdl.so_version) catch unreachable,
+        .version = sdl_so_version,
     });
     switch (linkage) {
         .dynamic => {
@@ -63,10 +93,9 @@ pub fn build(b: *std.Build) !void {
         },
         .static => lib.root_module.addCMacro("SDL_STATIC_LIB", "1"),
     }
-    lib.root_module.addCMacro("SDL_VENDOR_INFO", std.fmt.comptimePrint("\"{s} {s} (SDL {s})\"", .{
-        "https://github.com/allyourcodebase/SDL3",
+    lib.root_module.addCMacro("SDL_VENDOR_INFO", std.fmt.comptimePrint("\"{s} {s}\"", .{
+        "https://github.com/allyourcodebase/SDL",
         build_zon.version,
-        build_zon.dependencies.sdl.version,
     }));
     lib.installHeadersDirectory(upstream.path("include/SDL3"), "SDL3", .{});
     b.installArtifact(lib);
@@ -118,19 +147,22 @@ pub fn build(b: *std.Build) !void {
             // safe added.
             // https://wiki.libsdl.org/SDL3/SDL_ASSERT_LEVEL
             .SDL_DEFAULT_ASSERT_LEVEL_CONFIGURED = true,
-            .SDL_DEFAULT_ASSERT_LEVEL = switch (optimize) {
-                .Debug, .ReleaseSafe => @as(i64, 2),
-                .ReleaseSmall, .ReleaseFast => @as(i64, 1),
-            },
+            .SDL_DEFAULT_ASSERT_LEVEL = @as(u2, switch (optimize orelse std.builtin.OptimizeMode.Debug) {
+                .Debug, .ReleaseSafe => 2,
+                .ReleaseSmall, .ReleaseFast => 1,
+            }),
         });
         lib.root_module.addConfigHeader(build_config_h);
 
         // Configure the build for the target platform
         switch (target.result.os.tag) {
-            .linux => linux.build(b, target.result, lib, build_config_h),
+            .linux => if (target.result.abi.isAndroid())
+                android.build(b, target.result, lib, build_config_h, system_paths)
+            else
+                linux.build(b, target.result, lib, build_config_h),
             .windows => windows.build(b, target.result, lib, build_config_h),
             .macos => macos.build(b, target.result, lib, build_config_h),
-            .ios => ios.build(b, target.result, lib, build_config_h),
+            .ios => ios.build(b, target.result, lib, build_config_h, system_paths),
             else => @panic("target has no default config"),
         }
     }
@@ -139,29 +171,17 @@ pub fn build(b: *std.Build) !void {
     linux.addWaylandScannerStep(b);
 
     // Translate the SDL headers and export them as a Zig module
-    const translate_c = b.dependency("translate_c", .{});
-    const translator: Translator = .init(translate_c, .{
-        .c_source_file = b.path("src/sdl.h"),
+    const translate_c = b.addTranslateC(.{
+        .root_source_file = b.path("src/sdl.h"),
         .target = target,
-        // https://codeberg.org/ziglang/translate-c/issues/327
-        .optimize = switch (target.result.os.tag) {
-            .windows => switch (optimize) {
-                .ReleaseSafe => .ReleaseFast,
-                else => optimize,
-            },
-            else => optimize,
-        },
+        .optimize = optimize orelse std.builtin.OptimizeMode.Debug,
     });
-
-    translator.defineCMacro("USING_GENERATED_CONFIG_H", "1");
-    translator.addIncludePath(upstream.path("include"));
-    translator.addIncludePath(upstream.path("src/video/khronos"));
-    translator.mod.linkLibrary(lib);
-    try b.modules.putNoClobber(b.graph.arena, "sdl3", translator.mod);
-    addAppleSdkPathsToTranslator(b, target.result, translator);
-    if (target.result.os.tag == .ios) {
-        translator.defineCMacro("TARGET_OS_IPHONE", "1");
-    }
+    translate_c.defineCMacro("USING_GENERATED_CONFIG_H", "1");
+    translate_c.addIncludePath(upstream.path("include"));
+    translate_c.addIncludePath(upstream.path("src/video/khronos"));
+    addAppleSdkPathsToTranslateC(b, target.result, translate_c);
+    const module = translate_c.addModule("sdl3");
+    module.linkLibrary(lib);
 
     // Add the example
     const example = b.addExecutable(.{
@@ -172,7 +192,7 @@ pub fn build(b: *std.Build) !void {
             .optimize = optimize,
         }),
     });
-    example.root_module.addImport("sdl3", translator.mod);
+    example.root_module.addImport("sdl3", module);
 
     const build_example_step = b.step("example", "Build the example app");
     build_example_step.dependOn(&example.step);
@@ -182,16 +202,62 @@ pub fn build(b: *std.Build) !void {
     run_step.dependOn(&run_example.step);
 }
 
-pub fn addAppleSdkPathsToTranslator(b: *std.Build, target: std.Target, translator: Translator) void {
+/// Fetches a lazy dependency, unless provided via `-fsys`.
+///
+/// A more typical setup would still need to link to the library in the event that it's provided by
+/// `-fsys`, but we can just treat this as a noop as SDL doesn't link to its dependencies, it
+/// `dlopen`s them when available. We only pull them in for the headers.
+pub fn lazyDependency(
+    step: *std.Build.Step,
+    name: []const u8,
+    args: anytype,
+) ?*std.Build.Dependency {
+    // If we're using a system integration, return null as no work needs to be done. SDL will
+    // `dlopen` the library, if available, at runtime so we don't need to link it here.
+    if (step.owner.systemIntegrationOption(name, .{})) return null;
+    if (@hasDecl(std.Build, "dependencyStep")) {
+        return step.owner.dependencyStep(step, name, args);
+    } else {
+        // https://github.com/allyourcodebase/SDL/issues/44
+        return step.owner.lazyDependency(name, .{});
+    }
+}
+
+/// Adds an include path via `lazyDependency`, unless provided via `-fsys`.
+pub fn addDepIncludePath(
+    lib: *std.Build.Step.Compile,
+    name: []const u8,
+    sub_path: []const u8,
+    args: anytype,
+) void {
+    if (lazyDependency(&lib.step, name, args)) |dep| {
+        lib.root_module.addIncludePath(dep.path(sub_path));
+    }
+}
+
+/// Fill in any of `paths` from the SDK found with `xcrun`. Left unset outside Apple or if no SDK is found.
+pub fn withAppleSdkFallback(b: *std.Build, target: std.Target, paths: SystemPaths) SystemPaths {
+    if (!target.os.tag.isDarwin()) return paths;
+    if (paths.include != null and paths.framework != null) return paths;
+
+    const sdk = std.zig.system.darwin.getSdk(b.allocator, b.graph.io, &target) orelse return paths;
+
+    return .{
+        .include = paths.include orelse .{ .cwd_relative = b.pathJoin(&.{ sdk, "usr/include" }) },
+        .framework = paths.framework orelse .{ .cwd_relative = b.pathJoin(&.{ sdk, "System/Library/Frameworks" }) },
+        .library = paths.library orelse .{ .cwd_relative = b.pathJoin(&.{ sdk, "usr/lib" }) },
+    };
+}
+
+pub fn addAppleSdkPathsToTranslateC(b: *std.Build, target: std.Target, translate_c: *std.Build.Step.TranslateC) void {
     if (!target.os.tag.isDarwin()) return;
 
     const sdk = std.zig.system.darwin.getSdk(b.allocator, b.graph.io, &target) orelse
         @panic("Couldn't detect Apple SDK");
 
-    translator.addIncludePath(.{ .cwd_relative = b.pathJoin(&.{ sdk, "usr/include" }) });
-    translator.addSystemFrameworkPath(.{ .cwd_relative = b.pathJoin(&.{ sdk, "System/Library/Frameworks" }) });
-    translator.addSystemFrameworkPath(.{ .cwd_relative = b.pathJoin(&.{ sdk, "System/Library/SubFrameworks" }) });
-    translator.addIncludePath(.{ .cwd_relative = b.pathJoin(&.{ sdk, "usr/lib" }) });
+    translate_c.addIncludePath(.{ .cwd_relative = b.pathJoin(&.{ sdk, "usr/include" }) });
+    translate_c.addSystemFrameworkPath(.{ .cwd_relative = b.pathJoin(&.{ sdk, "System/Library/Frameworks" }) });
+    translate_c.addSystemFrameworkPath(.{ .cwd_relative = b.pathJoin(&.{ sdk, "System/Library/SubFrameworks" }) });
 }
 
 pub fn addAppleSdkPathsToModule(b: *std.Build, target: std.Target, module: *std.Build.Module) void {

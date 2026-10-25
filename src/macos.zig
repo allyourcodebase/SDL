@@ -11,13 +11,9 @@ pub fn build(
     lib: *std.Build.Step.Compile,
     build_config_h: *std.Build.Step.ConfigHeader,
 ) void {
+    _ = target;
+
     const upstream = b.dependency("sdl", .{});
-
-    // Add the platform specific dependency include paths
-    lib.root_module.addIncludePath(b.dependency("egl", .{}).path("api"));
-    lib.root_module.addIncludePath(b.dependency("opengl", .{}).path("api"));
-
-    root.addAppleSdkPathsToModule(b, target, lib.root_module);
 
     // Link with the platform specific system frameworks
     lib.root_module.linkFramework("Cocoa", .{});
@@ -43,7 +39,7 @@ pub fn build(
     // Add the platform specific sources
     const objc_flags = root.flags.* ++ [_][]const u8{"-fobjc-arc"};
     lib.root_module.addCSourceFiles(.{
-        .files = &(sources.cocoa ++ sources.darwin ++ sources.mac ++ sources.unix ++ sources.pthread),
+        .files = &(sources.cocoa ++ sources.apple ++ sources.darwin ++ sources.mac ++ sources.unix ++ sources.pthread),
         .root = upstream.path("src"),
         .flags = &objc_flags,
     });
@@ -73,9 +69,6 @@ pub fn build(
         // C library functions
         .HAVE_DLOPEN = 1,
         .HAVE_MALLOC = 1,
-        // .HAVE_CALLOC = 1,
-        // .HAVE_REALLOC = 1,
-        // .HAVE_FREE = 1,
         .HAVE_GETENV = 1,
         .HAVE_SETENV = 1,
         .HAVE_PUTENV = 1,
@@ -169,10 +162,8 @@ pub fn build(
         .HAVE_SYSCONF = 1,
         .HAVE_CLOCK_GETTIME = 1,
         .HAVE_GETPAGESIZE = 1,
-        // .HAVE_MPROTECT = 1,
         .HAVE_PTHREAD_SETNAME_NP = 1,
         .HAVE_SEM_TIMEDWAIT = 1,
-        // .HAVE_SYSCTL = 1,
         .HAVE_SYSCTLBYNAME = 1,
         .HAVE_O_CLOEXEC = 1,
         .USE_POSIX_SPAWN = 1,
