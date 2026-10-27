@@ -62,7 +62,7 @@ pub fn build(b: *std.Build) !void {
 
     // Get the SO version. This is the same as the SDL version, but the major version is elided
     // since it's baked into the name. This mirrors the official build process.
-    var sdl_so_version = comptime std.SemanticVersion.parse(build_zon.dependencies.sdl.version) catch unreachable;
+    var sdl_so_version = comptime std.SemanticVersion.parse(build_zon.dependencies.sdl.upstream_version) catch unreachable;
     assert(sdl_so_version.major == 3);
     sdl_so_version.major = 0;
 

@@ -29,7 +29,7 @@ pub fn build(
         if (root.lazyDependency(&lib.step, "dbus", .{})) |dbus| {
             lib.root_module.addIncludePath(dbus.path("."));
 
-            const version_string = build_zon.dependencies.dbus.version;
+            const version_string = build_zon.dependencies.dbus.upstream_version;
             const version = comptime std.SemanticVersion.parse(version_string) catch unreachable;
             std.debug.assert(target.cTypeByteSize(.short) == 2);
             std.debug.assert(target.cTypeByteSize(.int) == 4);
@@ -309,7 +309,7 @@ pub fn build(
 
             // Provide the Xcursor headers
             if (root.lazyDependency(&lib.step, "xcursor", .{})) |xcursor| {
-                const version_string = build_zon.dependencies.xcursor.version;
+                const version_string = build_zon.dependencies.xcursor.upstream_version;
                 const version = comptime std.SemanticVersion.parse(version_string) catch unreachable;
                 const config = b.addConfigHeader(.{
                     .style = .{ .autoconf_undef = xcursor.path("include/X11/Xcursor/Xcursor.h.in") },
@@ -341,7 +341,7 @@ pub fn build(
             });
             _ = generated.addCopyFile(compat_h.getOutputFile(), compat_h.include_path);
 
-            const version_string = build_zon.dependencies.decor.version;
+            const version_string = build_zon.dependencies.decor.upstream_version;
             const version = comptime std.SemanticVersion.parse(version_string) catch unreachable;
             const version_h = b.addConfigHeader(.{
                 .style = .{ .autoconf_undef = b.path("deps/liburing/io_uring_version.h.in") },
@@ -357,7 +357,7 @@ pub fn build(
         if (root.lazyDependency(&lib.step, "pipewire", .{})) |pipewire| {
             lib.root_module.addIncludePath(pipewire.path("spa/include"));
             lib.root_module.addIncludePath(pipewire.path("src"));
-            const version_string = build_zon.dependencies.pipewire.version;
+            const version_string = build_zon.dependencies.pipewire.upstream_version;
             const api_version_string = build_zon.dependencies.pipewire.api_version;
             const version = comptime std.SemanticVersion.parse(version_string) catch unreachable;
             const config_h = b.addConfigHeader(.{
@@ -377,7 +377,7 @@ pub fn build(
             @setEvalBranchQuota(2000);
             if (root.lazyDependency(&lib.step, pulseaudio_name, .{})) |pulseaudio| {
                 lib.root_module.addIncludePath(pulseaudio.path("src"));
-                const version_string = build_zon.dependencies.pulseaudio.version;
+                const version_string = build_zon.dependencies.pulseaudio.upstream_version;
                 const version = comptime std.SemanticVersion.parse(version_string) catch unreachable;
                 const api_version_string = build_zon.dependencies.pulseaudio.api_version;
                 const api_version = comptime std.fmt.parseInt(u32, api_version_string, 10) catch unreachable;
@@ -403,7 +403,7 @@ pub fn build(
             lib.root_module.addIncludePath(wayland.path("egl"));
 
             // Provide the config header
-            const version_string = build_zon.dependencies.wayland.version;
+            const version_string = build_zon.dependencies.wayland.upstream_version;
             const version = comptime std.SemanticVersion.parse(version_string) catch unreachable;
             const version_h = b.addConfigHeader(.{
                 .style = .{ .cmake = wayland.path("src/wayland-version.h.in") },
@@ -436,7 +436,7 @@ pub fn build(
         // Provide the Fribidi headers
         if (root.lazyDependency(&lib.step, "fribidi", .{})) |fribidi| {
             const interface_version = build_zon.dependencies.fribidi.interface_version;
-            const version_string = build_zon.dependencies.fribidi.version;
+            const version_string = build_zon.dependencies.fribidi.upstream_version;
             const version = comptime std.SemanticVersion.parse(version_string) catch unreachable;
 
             const unicode_version_string = build_zon.dependencies.fribidi.unicode_version;
@@ -525,9 +525,9 @@ pub fn build(
     //
     // Dynamic library versions are from Steam Linux Runtime 3.0 Sniper unless otherwise noted:
     // https://gitlab.steamos.cloud/steamrt/steamrt/-/tree/steamrt/sniper
-    const libdecor_version_string = build_zon.dependencies.decor.version;
+    const libdecor_version_string = build_zon.dependencies.decor.upstream_version;
     const libdecor_version = comptime std.SemanticVersion.parse(libdecor_version_string) catch unreachable;
-    const xkbcommon_version_string = build_zon.dependencies.xkbcommon.version;
+    const xkbcommon_version_string = build_zon.dependencies.xkbcommon.upstream_version;
     const xkbcommon_version = comptime std.SemanticVersion.parse(xkbcommon_version_string) catch unreachable;
     const have_sigtimedwait: i64 = if (target.os.tag == .openbsd) 0 else 1;
     build_config_h.addValues(.{
