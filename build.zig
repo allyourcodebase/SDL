@@ -21,7 +21,7 @@ pub const SystemPaths = struct {
     framework: ?std.Build.LazyPath,
     library: ?std.Build.LazyPath,
 
-    pub fn print_missing_system_path_option(path: ?std.Build.LazyPath, comptime flag: []const u8, comptime platform: []const u8) std.Build.LazyPath {
+    pub fn printMissingSystemPathOption(path: ?std.Build.LazyPath, comptime flag: []const u8, comptime platform: []const u8) std.Build.LazyPath {
         return path orelse {
             std.log.err("'-D" ++ flag ++ "' is required when building SDL for " ++ platform, .{});
             std.process.exit(1);

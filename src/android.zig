@@ -13,7 +13,7 @@ pub fn build(
 
     // NDK headers are not bundled with Zig; bionic's arch-specific headers (e.g. `jni.h`
     // adjacent files, `<triple>/asm/...`) live in a per-triple subdirectory of usr/include.
-    const include_path = root.SystemPaths.print_missing_system_path_option(
+    const include_path = root.SystemPaths.printMissingSystemPathOption(
         paths.include,
         "include_path (<ndk>/toolchains/llvm/prebuilt/<host>/sysroot/usr/include)",
         "Android",

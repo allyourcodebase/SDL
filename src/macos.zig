@@ -5,7 +5,13 @@ const root = @import("../build.zig");
 const Subsystems = root.Subsystems;
 const AllDrivers = root.Drivers;
 
-pub fn build(b: *std.Build, target: std.Target, lib: *std.Build.Step.Compile, build_config_h: *std.Build.Step.ConfigHeader, paths: root.SystemPaths) void {
+pub fn build(
+    b: *std.Build,
+    target: std.Target,
+    lib: *std.Build.Step.Compile,
+    build_config_h: *std.Build.Step.ConfigHeader,
+    paths: root.SystemPaths,
+) void {
     _ = target;
 
     const upstream = b.dependency("sdl", .{});
