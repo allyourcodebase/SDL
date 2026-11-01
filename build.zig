@@ -134,7 +134,7 @@ pub fn build(b: *std.Build) !void {
             else
                 linux.build(b, target.result, lib, build_config_h),
             .windows => windows.build(b, target.result, lib, build_config_h),
-            .macos => macos.build(b, target.result, lib, build_config_h),
+            .macos => macos.build(b, target.result, lib, build_config_h, system_paths),
             .ios => ios.build(b, target.result, lib, build_config_h, system_paths),
             else => @panic("target has no default config"),
         }

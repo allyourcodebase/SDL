@@ -5,15 +5,14 @@ const root = @import("../build.zig");
 const Subsystems = root.Subsystems;
 const AllDrivers = root.Drivers;
 
-pub fn build(
-    b: *std.Build,
-    target: std.Target,
-    lib: *std.Build.Step.Compile,
-    build_config_h: *std.Build.Step.ConfigHeader,
-) void {
+pub fn build(b: *std.Build, target: std.Target, lib: *std.Build.Step.Compile, build_config_h: *std.Build.Step.ConfigHeader, paths: root.SystemPaths) void {
     _ = target;
 
     const upstream = b.dependency("sdl", .{});
+
+    if (paths.include) |p| lib.root_module.addSystemIncludePath(p);
+    if (paths.framework) |p| lib.root_module.addSystemFrameworkPath(p);
+    if (paths.library) |p| lib.root_module.addLibraryPath(p);
 
     // Link with the platform specific system frameworks
     lib.root_module.linkFramework("Cocoa", .{});
