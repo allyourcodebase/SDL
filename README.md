@@ -55,6 +55,18 @@ zig build run-example
 
 This should produce a window with a pulsing gradient.
 
+For Emscripten, the example is linked with `emcc` into `zig-out/web`, and `run-example` opens it in
+your browser with `emrun`. Both need to be on your `PATH`, e.g. by sourcing `emsdk_env.sh`. On a
+fresh emsdk install, the sysroot headers must be generated before the first build:
+
+```sh
+embuilder build sysroot
+zig build run-example -Dtarget=wasm32-emscripten -Dinclude_path="$(em-config CACHE)/sysroot/include"
+```
+
+Zig can't link Emscripten executables, so your own app will need to be linked with `emcc` too. See
+`build.zig` for an example of how to do this.
+
 ## Help, `SDL_Init` failed on Linux!
 
 ```sh
@@ -114,7 +126,10 @@ This library provides a default configuration for common targets:
       `-Dinclude_path=$SDK/usr/include -Dframework_path=$SDK/System/Library/Frameworks` with
       `SDK=$(xcrun --sdk iphoneos --show-sdk-path)`)
 - [x] Android (pass `-Dinclude_path=<ndk>/toolchains/llvm/prebuilt/<host>/sysroot/usr/include`)
-- [ ] [Emscripten (help wanted!)](https://github.com/allyourcodebase/SDL/issues/5)
+- [x] Emscripten (the Emscripten sysroot is not bundled with Zig; pass
+      `-Dinclude_path=$(em-config CACHE)/sysroot/include` with
+      [emsdk](https://emscripten.org/docs/getting_started/downloads.html) activated, static linkage
+      only)
 - [ ] [Consoles (help wanted!)](https://github.com/allyourcodebase/SDL/issues/6)
 
 You can override the default target configuration by setting `default_target_config` to `false`, and
