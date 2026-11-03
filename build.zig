@@ -51,9 +51,6 @@ pub fn build(b: *std.Build) !void {
         ,
     ) orelse .static;
 
-    // Cross-compiling to a target whose SDK isn't bundled with Zig (iOS, Android) needs the
-    // SDK's headers/frameworks/libs passed in explicitly. Scoped to the SDL library only, unlike
-    // `--sysroot` this does not re-roots paths across the whole build graph.
     const system_paths: SystemPaths = .{
         .include = b.option(std.Build.LazyPath, "include_path", "SDK include dir, e.g. $(xcrun --sdk iphoneos --show-sdk-path)/usr/include or <ndk sysroot>/usr/include"),
         .framework = b.option(std.Build.LazyPath, "framework_path", "SDK framework dir, e.g. $(xcrun --sdk iphoneos --show-sdk-path)/System/Library/Frameworks"),
@@ -153,6 +150,9 @@ pub fn build(b: *std.Build) !void {
     translate_c.addIncludePath(upstream.path("include"));
     translate_c.addIncludePath(upstream.path("src/video/khronos"));
     const module = translate_c.addModule("sdl3");
+    if (system_paths.include) |p| module.addSystemIncludePath(p);
+    if (system_paths.framework) |p| module.addSystemFrameworkPath(p);
+    if (system_paths.library) |p| module.addLibraryPath(p);
     module.linkLibrary(lib);
 
     // Add the example
