@@ -44,7 +44,10 @@ pub fn build(
     lib.root_module.linkFramework("CoreHaptics", .{ .weak = true });
 
     // Add the platform specific sources
-    const objc_flags = root.flags.* ++ [_][]const u8{"-fobjc-arc"};
+    const objc_flags = root.flags.* ++ [_][]const u8{
+        "-fobjc-arc",
+        "-fno-sanitize=builtin",
+    };
     lib.root_module.addCSourceFiles(.{
         .files = &(sources.uikit ++ sources.apple ++ sources.pthread),
         .root = upstream.path("src"),

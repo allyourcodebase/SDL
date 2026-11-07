@@ -113,15 +113,15 @@ money somehow. In those cases, instructions are provided on how to obtain the SD
 - [x] Linux (includes Steam Deck)
 - [x] Windows
 - [x] macOS
-  - You can get the SDK with `1xcrun --sdk macosx --show-sdk-path` on a mac
+  - You can get the SDK with `xcrun --sdk macosx --show-sdk-path` on a mac
   - Then pass the following options, either on the command line or into `b.dependency`:
-    `-Dinclude_path=$SDK/usr/bin`,
+    `-Dinclude_path=$SDK/usr/include`,
     `-Dlibrary_path=$SDK/usr/lib`
     - `-Dframework_path=$SDK/System/Library/Frameworks`.
 - [x] iOS
-  - You can get the SDK with `1xcrun --sdk iphoneos --show-sdk-path` on a mac
+  - You can get the SDK with `xcrun --sdk iphoneos --show-sdk-path` on a mac
   - Then pass the following options, either on the command line or into `b.dependency`:
-    `-Dinclude_path=$SDK/usr/bin`,
+    `-Dinclude_path=$SDK/usr/include`,
     `-Dlibrary_path=$SDK/usr/lib`
     - `-Dframework_path=$SDK/System/Library/Frameworks`.
 - [x] Android
