@@ -662,6 +662,7 @@ pub fn build(
         .HAVE_GETPAGESIZE = 1,
         .HAVE_ICONV = 1,
         .SDL_USE_LIBICONV = 1,
+        .HAVE_PTHREAD_CONDATTR_SETCLOCK = 1,
         .HAVE_PTHREAD_SETNAME_NP = 1,
         .HAVE_SEM_TIMEDWAIT = 1,
         .HAVE_GETAUXVAL = 1,
