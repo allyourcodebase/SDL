@@ -113,22 +113,20 @@ money somehow. In those cases, instructions are provided on how to obtain the SD
 - [x] Linux (includes Steam Deck)
 - [x] Windows
 - [x] macOS
-  - You can get the SDK with `1xcrun --sdk macosx --show-sdk-path` on a mac
+  - You can get the SDK with `xcrun --sdk macosx --show-sdk-path` on a mac
   - Then pass the following options, either on the command line or into `b.dependency`:
-    `-Dinclude_path=$SDK/usr/bin`,
-    `-Dlibrary_path=$SDK/usr/lib`
+    `-Dinclude_path=$SDK/usr/bin`, `-Dlibrary_path=$SDK/usr/lib`
     - `-Dframework_path=$SDK/System/Library/Frameworks`.
 - [x] iOS
-  - You can get the SDK with `1xcrun --sdk iphoneos --show-sdk-path` on a mac
+  - You can get the SDK with `xcrun --sdk iphoneos --show-sdk-path` on a mac
   - Then pass the following options, either on the command line or into `b.dependency`:
-    `-Dinclude_path=$SDK/usr/bin`,
-    `-Dlibrary_path=$SDK/usr/lib`
+    `-Dinclude_path=$SDK/usr/bin`, `-Dlibrary_path=$SDK/usr/lib`
     - `-Dframework_path=$SDK/System/Library/Frameworks`.
 - [x] Android
   - Find the Android SDK online
-    - I don't personally target Android. If you do and you think we're allowed to distribute the
-      SDK via a Lazy dependency, or just want to update these instructions to add a link, open a PR
-      or file an issue!
+    - I don't personally target Android. If you do and you think we're allowed to distribute the SDK
+      via a Lazy dependency, or just want to update these instructions to add a link, open a PR or
+      file an issue!
   - Pass the following options, either on the command line or into `b.dependency`:
     - `-Dinclude_path=$SDK/toolchains/llvm/prebuilt/$HOST/sysroot/usr/include`
 - [ ] [Emscripten (help wanted!)](https://github.com/allyourcodebase/SDL/issues/5)
