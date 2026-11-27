@@ -22,7 +22,7 @@ pub const SystemPaths = struct {
     framework: ?std.Build.LazyPath,
     library: ?std.Build.LazyPath,
 
-    pub fn print_missing_system_path_option(path: ?std.Build.LazyPath, comptime flag: []const u8, comptime platform: []const u8) std.Build.LazyPath {
+    pub fn printMissingSystemPathOption(path: ?std.Build.LazyPath, comptime flag: []const u8, comptime platform: []const u8) std.Build.LazyPath {
         return path orelse {
             std.log.err("'-D" ++ flag ++ "' is required when building SDL for " ++ platform, .{});
             std.process.exit(1);
@@ -52,15 +52,12 @@ pub fn build(b: *std.Build) !void {
         ,
     ) orelse .static;
 
-    // Upstream doesn't support building SDL as a shared library for Emscripten
+// Upstream doesn't support building SDL as a shared library for Emscripten
     if (target.result.os.tag == .emscripten and linkage == .dynamic) {
         std.log.err("'-Dlinkage=dynamic' is not supported when building SDL for Emscripten", .{});
         std.process.exit(1);
     }
-
-    // Cross-compiling to a target whose SDK isn't bundled with Zig (iOS, Android) needs the
-    // SDK's headers/frameworks/libs passed in explicitly. Scoped to the SDL library only, unlike
-    // `--sysroot` this does not re-roots paths across the whole build graph.
+    
     const system_paths: SystemPaths = .{
         .include = b.option(std.Build.LazyPath, "include_path", "SDK include dir, e.g. $(xcrun --sdk iphoneos --show-sdk-path)/usr/include or <ndk sysroot>/usr/include"),
         .framework = b.option(std.Build.LazyPath, "framework_path", "SDK framework dir, e.g. $(xcrun --sdk iphoneos --show-sdk-path)/System/Library/Frameworks"),
@@ -69,7 +66,7 @@ pub fn build(b: *std.Build) !void {
 
     // Get the SO version. This is the same as the SDL version, but the major version is elided
     // since it's baked into the name. This mirrors the official build process.
-    var sdl_so_version = comptime std.SemanticVersion.parse(build_zon.dependencies.sdl.version) catch unreachable;
+    var sdl_so_version = comptime std.SemanticVersion.parse(build_zon.dependencies.sdl.upstream_version) catch unreachable;
     assert(sdl_so_version.major == 3);
     sdl_so_version.major = 0;
 
@@ -150,7 +147,7 @@ pub fn build(b: *std.Build) !void {
             else
                 linux.build(b, target.result, lib, build_config_h),
             .windows => windows.build(b, target.result, lib, build_config_h),
-            .macos => macos.build(b, target.result, lib, build_config_h),
+            .macos => macos.build(b, target.result, lib, build_config_h, system_paths),
             .ios => ios.build(b, target.result, lib, build_config_h, system_paths),
             .emscripten => emscripten.build(b, target.result, lib, build_config_h, system_paths),
             else => @panic("target has no default config"),
@@ -174,6 +171,9 @@ pub fn build(b: *std.Build) !void {
         if (system_paths.include) |include_path| translate_c.addSystemIncludePath(include_path);
     }
     const module = translate_c.addModule("sdl3");
+    if (system_paths.include) |p| module.addSystemIncludePath(p);
+    if (system_paths.framework) |p| module.addSystemFrameworkPath(p);
+    if (system_paths.library) |p| module.addLibraryPath(p);
     module.linkLibrary(lib);
 
     // Add the example

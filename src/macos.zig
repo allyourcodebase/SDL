@@ -10,10 +10,15 @@ pub fn build(
     target: std.Target,
     lib: *std.Build.Step.Compile,
     build_config_h: *std.Build.Step.ConfigHeader,
+    paths: root.SystemPaths,
 ) void {
     _ = target;
 
     const upstream = b.dependency("sdl", .{});
+
+    if (paths.include) |p| lib.root_module.addSystemIncludePath(p);
+    if (paths.framework) |p| lib.root_module.addSystemFrameworkPath(p);
+    if (paths.library) |p| lib.root_module.addLibraryPath(p);
 
     // Link with the platform specific system frameworks
     lib.root_module.linkFramework("Cocoa", .{});
@@ -34,7 +39,6 @@ pub fn build(
     lib.root_module.linkFramework("GameController", .{});
     lib.root_module.linkFramework("CoreBluetooth", .{});
     lib.root_module.linkFramework("UniformTypeIdentifiers", .{});
-    lib.root_module.linkSystemLibrary("iconv", .{});
 
     // Add the platform specific sources
     const objc_flags = root.flags.* ++ [_][]const u8{"-fobjc-arc"};

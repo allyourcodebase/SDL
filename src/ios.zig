@@ -15,8 +15,8 @@ pub fn build(
 
     // The iOS SDK is not bundled with Zig, so its headers and frameworks have to be passed in.
     const SystemPaths = root.SystemPaths;
-    const framework_path = SystemPaths.print_missing_system_path_option(paths.framework, "framework_path", "iOS");
-    lib.root_module.addSystemIncludePath(SystemPaths.print_missing_system_path_option(paths.include, "include_path", "iOS"));
+    const framework_path = SystemPaths.printMissingSystemPathOption(paths.framework, "framework_path", "iOS");
+    lib.root_module.addSystemIncludePath(SystemPaths.printMissingSystemPathOption(paths.include, "include_path", "iOS"));
     lib.root_module.addSystemFrameworkPath(framework_path);
     // UIKit.framework's headers reach into UIUtilities.framework, which lives in the sibling
     // SubFrameworks dir, not Frameworks. Apple's clang driver adds this search path implicitly;

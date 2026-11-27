@@ -116,16 +116,29 @@ dependencies with `--system`. See `zig build --help` for more info, also note `-
 
 # Target Configuration
 
-This library provides a default configuration for common targets:
+This library provides a default configuration for common targets.
 
-- [x] Linux (including Steam Deck)
-  - [x] Steam Deck
-- [x] Windows
-- [x] macOS (no cross compilation due to Apple licensing)
-- [x] iOS (the iOS SDK is not bundled with Zig; pass
-      `-Dinclude_path=$SDK/usr/include -Dframework_path=$SDK/System/Library/Frameworks` with
-      `SDK=$(xcrun --sdk iphoneos --show-sdk-path)`)
-- [x] Android (pass `-Dinclude_path=<ndk>/toolchains/llvm/prebuilt/<host>/sysroot/usr/include`)
+All targets support cross compilation, although some targets are owned by companies that don't let
+us provide you with their SDKs because they're under a strange illusion that this will net them more
+money somehow. In those cases, instructions are provided on how to obtain the SDK yourself.
+
+- [x] macOS
+  - You can get the SDK with `xcrun --sdk macosx --show-sdk-path` on a mac
+  - Then pass the following options, either on the command line or into `b.dependency`:
+    `-Dinclude_path=$SDK/usr/bin`, `-Dlibrary_path=$SDK/usr/lib`
+    - `-Dframework_path=$SDK/System/Library/Frameworks`.
+- [x] iOS
+  - You can get the SDK with `xcrun --sdk iphoneos --show-sdk-path` on a mac
+  - Then pass the following options, either on the command line or into `b.dependency`:
+    `-Dinclude_path=$SDK/usr/bin`, `-Dlibrary_path=$SDK/usr/lib`
+    - `-Dframework_path=$SDK/System/Library/Frameworks`.
+- [x] Android
+  - Find the Android SDK online
+    - I don't personally target Android. If you do and you think we're allowed to distribute the SDK
+      via a Lazy dependency, or just want to update these instructions to add a link, open a PR or
+      file an issue!
+  - Pass the following options, either on the command line or into `b.dependency`:
+    - `-Dinclude_path=$SDK/toolchains/llvm/prebuilt/$HOST/sysroot/usr/include`
 - [x] Emscripten (the Emscripten sysroot is not bundled with Zig; pass
       `-Dinclude_path=$(em-config CACHE)/sysroot/include` with
       [emsdk](https://emscripten.org/docs/getting_started/downloads.html) activated, static linkage
