@@ -56,3 +56,16 @@ jobs:
         run: |
           SDK="$(xcrun --sdk iphoneos --show-sdk-path)"
           zig build -Dtarget=aarch64-ios -Dinclude_path="$SDK/usr/include" -Dframework_path="$SDK/System/Library/Frameworks" --summary all
+
+      - name: Setup Emscripten
+        if: runner.os == 'Linux'
+        uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: 6.0.12
+
+      - name: Build for Emscripten
+        if: runner.os == 'Linux'
+        # The Emscripten sysroot is not bundled with Zig, and emsdk only populates it on first use.
+        run: |
+          embuilder build sysroot
+          zig build example -Dtarget=wasm32-emscripten -Dinclude_path="$(em-config CACHE)/sysroot/include" --summary all

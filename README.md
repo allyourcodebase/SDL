@@ -55,6 +55,18 @@ zig build run-example
 
 This should produce a window with a pulsing gradient.
 
+For Emscripten, the example is linked with `emcc` into `zig-out/web`, and `run-example` opens it in
+your browser with `emrun`. Both need to be on your `PATH`, e.g. by sourcing `emsdk_env.sh`. On a
+fresh emsdk install, the sysroot headers must be generated before the first build:
+
+```sh
+embuilder build sysroot
+zig build run-example -Dtarget=wasm32-emscripten -Dinclude_path="$(em-config CACHE)/sysroot/include"
+```
+
+Zig can't link Emscripten executables, so your own app will need to be linked with `emcc` too. See
+`build.zig` for an example of how to do this.
+
 ## Help, `SDL_Init` failed on Linux!
 
 ```sh
@@ -110,8 +122,6 @@ All targets support cross compilation, although some targets are owned by compan
 us provide you with their SDKs because they're under a strange illusion that this will net them more
 money somehow. In those cases, instructions are provided on how to obtain the SDK yourself.
 
-- [x] Linux (includes Steam Deck)
-- [x] Windows
 - [x] macOS
   - You can get the SDK with `xcrun --sdk macosx --show-sdk-path` on a mac
   - Then pass the following options, either on the command line or into `b.dependency`:
@@ -129,7 +139,10 @@ money somehow. In those cases, instructions are provided on how to obtain the SD
       file an issue!
   - Pass the following options, either on the command line or into `b.dependency`:
     - `-Dinclude_path=$SDK/toolchains/llvm/prebuilt/$HOST/sysroot/usr/include`
-- [ ] [Emscripten (help wanted!)](https://github.com/allyourcodebase/SDL/issues/5)
+- [x] Emscripten (the Emscripten sysroot is not bundled with Zig; pass
+      `-Dinclude_path=$(em-config CACHE)/sysroot/include` with
+      [emsdk](https://emscripten.org/docs/getting_started/downloads.html) activated, static linkage
+      only)
 - [ ] [Consoles (help wanted!)](https://github.com/allyourcodebase/SDL/issues/6)
 
 You can override the default target configuration by setting `default_target_config` to `false`, and

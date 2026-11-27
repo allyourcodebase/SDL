@@ -180,7 +180,6 @@
         "loadso/windows/SDL_sysloadso.c",
         "locale/SDL_locale.c",
         "main/emscripten/SDL_sysmain_runapp.c",
-        "main/generic/SDL_sysmain_callbacks.c",
         "main/n3ds/SDL_sysmain_runapp.c",
         "main/ps2/SDL_sysmain_runapp.c",
         "main/psp/SDL_sysmain_runapp.c",
@@ -429,6 +428,11 @@
         "video/yuv2rgb/yuv_rgb_std.c",
         "core/linux/SDL_progressbar.c",
     },
+    // The generic main callbacks implementation. Upstream only `#ifdef`s it out on iOS, so platforms
+    // that provide their own (e.g. Emscripten) need to leave it out to avoid a duplicate definition.
+    .main_callbacks_generic = .{
+        "main/generic/SDL_sysmain_callbacks.c",
+    },
     // Dummy drivers. Useful when porting to a new platform.
     .dummy = .{
         "locale/dummy/SDL_syslocale.c",
@@ -488,6 +492,8 @@
         "main/emscripten/SDL_sysmain_callbacks.c",
         "misc/emscripten/SDL_sysurl.c",
         "power/emscripten/SDL_syspower.c",
+        "sensor/emscripten/SDL_emscriptensensor.c",
+        "tray/dummy/SDL_tray.c",
     },
     .thread_generic = .{
         "thread/generic/SDL_syscond.c",
