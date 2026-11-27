@@ -35,7 +35,7 @@ pub fn build(
             std.debug.assert(target.cTypeByteSize(.int) == 4);
             const dbus_config = b.addConfigHeader(
                 .{
-                    .style = .{ .autoconf_at = dbus.path("dbus/dbus-arch-deps.h.in") },
+                    .style = autoconfFileShim(dbus.path("dbus/dbus-arch-deps.h.in")),
                     .include_path = "dbus/dbus-arch-deps.h",
                 },
                 .{
@@ -280,9 +280,7 @@ pub fn build(
             }
 
             const version_h = b.addConfigHeader(.{
-                .style = .{
-                    .autoconf_at = b.path("deps/glib/upstream/include/glib/gversionmacros.h.in"),
-                },
+                .style = autoconfFileShim(b.path("deps/glib/upstream/include/glib/gversionmacros.h.in")),
                 .include_path = "glib/gversionmacros.h",
             }, .{
                 .GLIB_VERSIONS = @embedFile("../deps/glib/glib_versions.h"),
@@ -298,7 +296,7 @@ pub fn build(
                 lib.root_module.addIncludePath(x11.path("include"));
 
                 const config = b.addConfigHeader(.{
-                    .style = .{ .autoconf_undef = x11.path("include/X11/XlibConf.h.in") },
+                    .style = autoconfHeaderShim(x11.path("include/X11/XlibConf.h.in")),
                     .include_path = "X11/XlibConf.h",
                 }, .{
                     .XTHREADS = 1,
@@ -312,7 +310,7 @@ pub fn build(
                 const version_string = build_zon.dependencies.xcursor.upstream_version;
                 const version = comptime std.SemanticVersion.parse(version_string) catch unreachable;
                 const config = b.addConfigHeader(.{
-                    .style = .{ .autoconf_undef = xcursor.path("include/X11/Xcursor/Xcursor.h.in") },
+                    .style = autoconfHeaderShim(xcursor.path("include/X11/Xcursor/Xcursor.h.in")),
                     .include_path = "X11/Xcursor/Xcursor.h",
                 }, .{
                     .XCURSOR_LIB_MAJOR = @as(i64, version.major),
@@ -327,7 +325,7 @@ pub fn build(
         {
             lib.root_module.addIncludePath(b.path("deps/liburing/include"));
             const compat_h = b.addConfigHeader(.{
-                .style = .{ .autoconf_undef = b.path("deps/liburing/compat.h.in") },
+                .style = autoconfHeaderShim(b.path("deps/liburing/compat.h.in")),
                 .include_path = "liburing/compat.h",
             }, .{
                 // Recent kernels should always have these features, so they're hard coded to `1`
@@ -344,7 +342,7 @@ pub fn build(
             const version_string = build_zon.dependencies.decor.upstream_version;
             const version = comptime std.SemanticVersion.parse(version_string) catch unreachable;
             const version_h = b.addConfigHeader(.{
-                .style = .{ .autoconf_undef = b.path("deps/liburing/io_uring_version.h.in") },
+                .style = autoconfHeaderShim(b.path("deps/liburing/io_uring_version.h.in")),
                 .include_path = "liburing/io_uring_version.h",
             }, .{
                 .IO_URING_VERSION_MAJOR = @as(i64, version.major),
@@ -361,7 +359,7 @@ pub fn build(
             const api_version_string = build_zon.dependencies.pipewire.api_version;
             const version = comptime std.SemanticVersion.parse(version_string) catch unreachable;
             const config_h = b.addConfigHeader(.{
-                .style = .{ .autoconf_at = pipewire.path("src/pipewire/version.h.in") },
+                .style = autoconfFileShim(pipewire.path("src/pipewire/version.h.in")),
                 .include_path = "pipewire/version.h",
             }, .{
                 .PIPEWIRE_VERSION_MAJOR = @as(i64, version.major),
@@ -875,4 +873,22 @@ pub fn addWaylandScannerStep(b: *std.Build) void {
 
 fn formatDynamic(comptime name: []const u8) []const u8 {
     return std.fmt.comptimePrint("\"{s}\"", .{name});
+}
+
+// https://github.com/allyourcodebase/SDL/issues/44
+fn autoconfFileShim(path: std.Build.LazyPath) std.Build.Step.ConfigHeader.Style {
+    return if (@hasField(std.Build.Step.ConfigHeader.Style, "autoconf_at")) .{
+        .autoconf_at = path,
+    } else if (@hasField(std.Build.Step.ConfigHeader.Style, "autoconf_file")) .{
+        .autoconf_file = path,
+    } else unreachable;
+}
+
+// https://github.com/allyourcodebase/SDL/issues/44
+fn autoconfHeaderShim(path: std.Build.LazyPath) std.Build.Step.ConfigHeader.Style {
+    return if (@hasField(std.Build.Step.ConfigHeader.Style, "autoconf_header")) .{
+        .autoconf_header = path,
+    } else if (@hasField(std.Build.Step.ConfigHeader.Style, "autoconf_undef")) .{
+        .autoconf_undef = path,
+    } else unreachable;
 }
