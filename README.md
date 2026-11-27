@@ -115,12 +115,12 @@ money somehow. In those cases, instructions are provided on how to obtain the SD
 - [x] macOS
   - You can get the SDK with `xcrun --sdk macosx --show-sdk-path` on a mac
   - Then pass the following options, either on the command line or into `b.dependency`:
-    `-Dinclude_path=$SDK/usr/bin`, `-Dlibrary_path=$SDK/usr/lib`
+    `-Dinclude_path=$SDK/usr/include`, `-Dlibrary_path=$SDK/usr/lib`
     - `-Dframework_path=$SDK/System/Library/Frameworks`.
 - [x] iOS
   - You can get the SDK with `xcrun --sdk iphoneos --show-sdk-path` on a mac
   - Then pass the following options, either on the command line or into `b.dependency`:
-    `-Dinclude_path=$SDK/usr/bin`, `-Dlibrary_path=$SDK/usr/lib`
+    `-Dinclude_path=$SDK/usr/include`, `-Dlibrary_path=$SDK/usr/lib`
     - `-Dframework_path=$SDK/System/Library/Frameworks`.
 - [x] Android
   - Find the Android SDK online
